@@ -10,7 +10,8 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.svg'],
+      // favicon.svg is already precached via workbox.globPatterns below;
+      // listing it in includeAssets too would double-register it.
       manifest: {
         id: '/',
         name: 'Moneta',

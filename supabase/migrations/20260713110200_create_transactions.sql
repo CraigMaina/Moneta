@@ -14,7 +14,7 @@ create table public.transactions (
   counter_account_id uuid references public.accounts (id) on delete restrict,
   category_id uuid references public.categories (id) on delete set null,
   kind public.transaction_kind not null,
-  amount_cents bigint not null check (amount_cents >= 0),
+  amount_cents bigint not null check (amount_cents > 0),
   merchant text,
   note text,
   occurred_at timestamptz not null default now(),

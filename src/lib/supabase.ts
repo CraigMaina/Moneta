@@ -15,11 +15,14 @@ const envSchema = z.object({
 const parsedEnv = envSchema.safeParse(import.meta.env)
 
 if (!parsedEnv.success) {
-  // Fail loudly in dev/build rather than silently shipping a broken client.
-  console.error(
-    '[supabase] Missing or invalid environment variables. Copy .env.example to .env and fill in your project values.',
-    parsedEnv.error.flatten().fieldErrors,
-  )
+  const message =
+    '[supabase] Missing or invalid environment variables. Copy .env.example to .env and fill in your project values.'
+  // A production build must never ship a client pointed at the placeholder
+  // host — fail hard. In dev, warn and fall back so first checkout still boots.
+  if (import.meta.env.PROD) {
+    throw new Error(`${message} ${JSON.stringify(parsedEnv.error.flatten().fieldErrors)}`)
+  }
+  console.error(message, parsedEnv.error.flatten().fieldErrors)
 }
 
 // Fall back to a syntactically valid placeholder so `createClient` doesn't

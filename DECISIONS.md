@@ -8,6 +8,17 @@ Each entry: date · decision · rationale · scope/impact.
 
 ---
 
+## 2026-07-13 — Phase 0 QA verdict + post-review polish (lead)
+
+qa-reviewer returned **APPROVE WITH NITS** on Phase 0 (no blocking findings). Before the cloud `db push`, the lead folded in the high-value nits so the push validates the final schema:
+
+- **`transactions.amount_cents` tightened from `>= 0` to `> 0`.** This resolves the earlier backend flag (see entry below) in favor of CLAUDE.md's "amounts are always positive." A KES 0 transaction has no meaning and would be noise in the parser corpus. `fee_cents` stays `>= 0` (a zero/absent fee is legitimate). Edited the migration in place — safe because it has not been applied to any database yet (Docker-less; cloud push pending).
+- **RLS pgTAP suite strengthened** (`supabase/tests/database/rls.test.sql`, plan 22 → 25): added (1) a "no permissive-open policy" assertion that fails if any public policy's `qual`/`with_check` both lack `auth.uid()` — this catches a future `USING (true)` regression the "a policy exists" checks would miss; and (2) a cross-user read+insert denial test on `transactions` (the money table), not just `accounts`. These close the two test gaps the reviewer flagged as most likely to let a real RLS regression through.
+- **PWA precache deduped** — dropped `includeAssets: ['favicon.svg']` from `vite.config.ts` (it's already precached via `workbox.globPatterns`); precache went 34 → 33 entries, verified in the build.
+- **Supabase client hardened** — `src/lib/supabase.ts` now throws on invalid env in `import.meta.env.PROD` so a production build can never silently ship a client pointed at the `placeholder.supabase.co` fallback (dev still warns + falls back so first checkout boots).
+
+**Deferred (recorded, not actioned this phase):** the `share_target` POST needs a custom SW `fetch` handler (F2/F3 owner switches `generateSW` → `injectManifest`); Supabase auth JWT persists to localStorage by default — revisit in F11 app-lock/security; `account_balances` transfer/fee net-out math needs a view-level fixture in Phase 2's safe-to-spend suite.
+
 ## 2026-07-13 — Phase 0 schema, RLS, derived balances, seed (backend-engineer)
 
 **Scope:** `supabase/migrations/20260713110000`…`20260713111000` (11 files), `supabase/seed.sql`, `supabase/tests/database/rls.test.sql`, `package.json` (`test:db` script).
@@ -49,6 +60,13 @@ Each entry: date · decision · rationale · scope/impact.
 - **Package manager: npm.** CLAUDE.md commands are written as `npm run …`; no lockfile present yet, so we standardize on npm.
 - **Toolchain versions:** React 18 + TypeScript strict + Vite, per CLAUDE.md fixed stack. No substitutions.
 - **Monorepo shape:** single Vite app at repo root with `supabase/` alongside `src/`. No workspace tooling in v1.
+
+## 2026-07-13 — DB verification via Supabase cloud (not local Docker)
+
+- **Docker Desktop is unavailable on this machine** (`docker: command not found`), so the local Supabase stack (`supabase db reset`, `supabase test db`) cannot run here.
+- **Decision (user):** verify schema + RLS against a **Supabase cloud project** instead of a local Docker Postgres. Migrations are applied with `supabase db push` to the linked cloud project; RLS is verified there.
+- **Rationale:** unblocks Phase 0's RLS exit criterion without Docker, and gives the feature phases a live backend to build against.
+- **Secret handling:** the DB password, service-role key, and access token stay in the user's shell / local `.env` (gitignored) and Supabase CLI credential store — never pasted into the transcript or committed.
 
 ## 2026-07-13 — Phase 0 scaffold (feature-engineer)
 

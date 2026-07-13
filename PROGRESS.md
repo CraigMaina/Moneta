@@ -18,24 +18,26 @@ _Read this first at the start of every session. Append at the end of every sessi
 - `backend-engineer` completed the Phase 0 schema: 11 migrations under `supabase/migrations/` covering all 10 PRD §7 tables (`accounts`, `categories`, `transactions`, `merchant_rules`, `goals`, `goal_contributions`, `recurring_items`, `profiles`, `streaks`, `challenges`) + the `account_balances` derived-balance view, each table with RLS enabled and select/insert/update/delete policies (`user_id = auth.uid()`) in the same migration that creates it, plus explicit Data-API grants (Supabase's newer default no longer auto-exposes new tables). `transactions.mpesa_ref` has its per-user partial unique index (dedupe backbone). `supabase/seed.sql` seeds a fixed dev user + 3 default accounts + the full PRD §4.3 category set, idempotently. A dynamic pgTAP RLS suite (`supabase/tests/database/rls.test.sql`, 22 assertions) asserts RLS is enabled + fully policied on every public table and does a real cross-user access test; wired as `npm run test:db`, kept separate from `npm run check`.
 - `npm run check` reconfirmed green after the schema work (Docker-less, as required).
 
+- `qa-reviewer` returned **APPROVE WITH NITS** on Phase 0 (no blocking findings). Verified green: `npm run check`, schema-matches-§7 (all 10 tables + view walked field-by-field), RLS present + correct on all tables by inspection, money rules honored end-to-end, PWA build (manifest incl. `share_target` + SW). Left unverifiable pending Docker/device: the pgTAP RLS *execution* and on-device install.
+- **Lead post-review polish** (all green, committed): tightened `transactions.amount_cents` to `> 0`; strengthened the RLS pgTAP suite (22 → 25) with a no-open-policy assertion + `transactions` cross-user denial; deduped PWA precache (34 → 33); hardened `supabase.ts` to throw on bad env in PROD. Details in DECISIONS.md.
+
 ## In-flight
 
-- Nothing in-flight; Phase 0 schema ready for `qa-reviewer` pass. `db reset`/`test:db` still need to be executed once Docker is available (see below).
+- **DB verification via Supabase cloud** (user chose this over local Docker — DECISIONS.md). User is creating a cloud project + linking the CLI. Once linked: `supabase db push` applies migrations to real Postgres and `supabase test db --db-url …` runs the strengthened pgTAP RLS suite. This closes the last verifiable Phase 0 exit box.
 
 ## Next
 
-- Dispatch `qa-reviewer` for the Phase 0 schema (migrations + RLS + seed + pgTAP suite).
-- In a Docker-capable environment: run `npx supabase db reset` (applies all 11 migrations + seed.sql) then `npm run test:db` (pgTAP RLS suite) to get first real execution evidence for this schema — currently unexecuted, see DECISIONS.md.
-- Fill in `.env` from `.env.example` with real Supabase project values before any Supabase-backed feature work.
-- Generate `src/lib/database.types.ts` via `npx supabase gen types typescript --local` once Docker/local db is available (skipped this round — no live db to introspect).
+- On user confirming CLI is linked: verify `db push` succeeds and the pgTAP RLS suite (25 assertions) passes against the cloud DB; then generate `src/lib/database.types.ts` from the live schema and wire it into the Supabase client types.
+- Then declare Phase 0 done and open **Phase 1 — Design system** (design-engineer: tokens as Tailwind theme + CSS vars already scaffolded → primitive kit + `/kitchen-sink` + safe-to-spend hero).
 
 ## Phase exit checklist (Phase 0)
 
 - [x] `npm run check` green
 - [x] Installable empty-shell PWA builds with manifest (incl. `share_target`) + service worker (`npm run build` verified locally; not yet installed on a physical device)
-- [x] Schema matches PRD §7 (backend-engineer) — all 10 tables + `account_balances` view, migrations in `supabase/migrations/`
-- [ ] RLS assertion test passes — suite written (`supabase/tests/database/rls.test.sql`, 22 assertions) but **unexecuted**; Docker unavailable in this environment (`docker` not on PATH, `supabase db reset`/`test db` both fail at the connection step). Must be run in a Docker-capable environment before this box is checked.
-- [ ] qa-reviewer returns APPROVE
+- [x] Schema matches PRD §7 — all 10 tables + `account_balances` view, migrations in `supabase/migrations/` (confirmed by qa-reviewer)
+- [x] qa-reviewer returns APPROVE (APPROVE WITH NITS; nits actioned or deferred-with-record)
+- [ ] RLS assertion test passes — suite strengthened to 25 assertions but **unexecuted**; closing via the Supabase cloud `db push` + `test db` path (in-flight)
+- [ ] Empty-shell PWA installed + running on a physical phone (build verified; on-device pending)
 
 ## Known incident (see DECISIONS.md for full detail)
 
