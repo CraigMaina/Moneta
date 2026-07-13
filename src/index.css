@@ -1,0 +1,73 @@
+@import 'tailwindcss';
+
+/* Self-hosted fonts (see DECISIONS.md for the @fontsource choice). */
+@import '@fontsource/plus-jakarta-sans/400.css';
+@import '@fontsource/plus-jakarta-sans/500.css';
+@import '@fontsource/plus-jakarta-sans/600.css';
+@import '@fontsource/plus-jakarta-sans/700.css';
+@import '@fontsource/bricolage-grotesque/500.css';
+@import '@fontsource/bricolage-grotesque/600.css';
+@import '@fontsource/bricolage-grotesque/700.css';
+
+/*
+ * CLAUDE.md design tokens — CSS custom properties are the source of truth.
+ * The Tailwind theme below (`@theme`) maps directly onto these so both
+ * `var(--coral-600)` and `bg-coral-600` / `text-ink-900` etc. stay in sync.
+ */
+:root {
+  --coral-600: #e8474b;
+  --coral-500: #f65d5e;
+  --coral-100: #feecea;
+  --ink-900: #211d1e;
+  --ink-600: #6b6467;
+  --ink-300: #c9c3c4;
+  --paper-0: #fffdfb;
+  --paper-50: #f7f3ef;
+  --leaf-600: #1f8a5d;
+  --amber-600: #c77a1e;
+
+  --font-display: 'Bricolage Grotesque', 'Plus Jakarta Sans', system-ui, sans-serif;
+  --font-body: 'Plus Jakarta Sans', system-ui, sans-serif;
+
+  --shadow-card: 0 1px 2px rgb(33 29 30 / 0.05), 0 8px 24px rgb(33 29 30 / 0.06);
+}
+
+@theme {
+  --color-coral-600: var(--coral-600);
+  --color-coral-500: var(--coral-500);
+  --color-coral-100: var(--coral-100);
+  --color-ink-900: var(--ink-900);
+  --color-ink-600: var(--ink-600);
+  --color-ink-300: var(--ink-300);
+  --color-paper-0: var(--paper-0);
+  --color-paper-50: var(--paper-50);
+  --color-leaf-600: var(--leaf-600);
+  --color-amber-600: var(--amber-600);
+
+  --font-display: var(--font-display);
+  --font-body: var(--font-body);
+
+  --shadow-card: var(--shadow-card);
+
+  --radius-card: 16px;
+  --radius-sheet: 24px;
+}
+
+@layer base {
+  html {
+    color-scheme: light;
+  }
+
+  body {
+    background-color: var(--paper-0);
+    color: var(--ink-900);
+    font-family: var(--font-body);
+  }
+}
+
+@layer utilities {
+  /* Money is always tabular-nums at the display edge — see formatKES() in src/lib/money.ts. */
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+}

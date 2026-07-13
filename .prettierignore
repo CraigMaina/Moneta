@@ -1,0 +1,14 @@
+dist
+dev-dist
+coverage
+node_modules
+supabase/.temp
+public
+
+# Product/process docs owned by other roles — never auto-reformat these.
+# (feature-engineer's `format`/`check` scripts only touch app source.)
+*.md
+!src/**/*.md
+.claude/
+DECISIONS.md
+PROGRESS.md
