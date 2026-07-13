@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { calcSafeToSpend, currentPeriod, type CalcTxn, type SafeToSpendResult } from '../../lib/safeToSpend'
+import { toNairobiDateString } from './nairobiDate'
 import { useProfile, useTransactions, useUpcomingRecurringBills } from './queries'
 
 /**
@@ -31,8 +32,22 @@ export interface UseSafeToSpendOptions {
   plannedGoalContributionsCents?: number
 }
 
+/**
+ * The calc result plus the two figures the `SafeToSpendHero` arc needs but the
+ * pure calculator (which is period-scoped, not day-scoped) doesn't expose:
+ *  - `spentTodayCents`: today's (Nairobi) expense spend, transfers excluded.
+ *  - `dailyBudgetCents`: today's gross allowance = max(0, safeToSpend) +
+ *    spentToday, so the arc reads spentToday / dailyBudget. When over budget
+ *    (safeToSpend < 0) this reduces to spentToday, i.e. a full arc — matching
+ *    the hero's own over-state, with no divide-by-zero.
+ */
+export interface SafeToSpendView extends SafeToSpendResult {
+  spentTodayCents: number
+  dailyBudgetCents: number
+}
+
 export interface UseSafeToSpendResult {
-  data: SafeToSpendResult | undefined
+  data: SafeToSpendView | undefined
   isLoading: boolean
   isError: boolean
   error: unknown
@@ -74,7 +89,7 @@ export function useSafeToSpend(options: UseSafeToSpendOptions = {}): UseSafeToSp
 
     const upcomingFixedBillsCents = recurringQuery.data.reduce((sum, item) => sum + item.amount_cents, 0)
 
-    return calcSafeToSpend({
+    const result = calcSafeToSpend({
       now,
       cycleAnchorDay,
       expectedIncomeCents,
@@ -82,6 +97,18 @@ export function useSafeToSpend(options: UseSafeToSpendOptions = {}): UseSafeToSp
       upcomingFixedBillsCents,
       plannedGoalContributionsCents,
     })
+
+    // Today's spend (Nairobi day), transfers excluded — for the hero arc.
+    const todayStr = toNairobiDateString(now)
+    let spentTodayCents = 0
+    for (const t of calcTxns) {
+      if (t.kind === 'expense' && toNairobiDateString(t.occurredAt) === todayStr) {
+        spentTodayCents += t.amountCents
+      }
+    }
+    const dailyBudgetCents = Math.max(0, result.safeToSpendCents) + spentTodayCents
+
+    return { ...result, spentTodayCents, dailyBudgetCents }
   }, [ready, transactionsQuery.data, recurringQuery.data, now, cycleAnchorDay, expectedIncomeCents, plannedGoalContributionsCents])
 
   return { data, isLoading, isError, error }

@@ -128,7 +128,7 @@ describe('useSafeToSpend — composes DB rows into calcSafeToSpend and returns i
       plannedGoalContributionsCents: 0,
     })
 
-    expect(result.current.data).toEqual(expected)
+    expect(result.current.data).toMatchObject(expected)
     // The transfer's huge amount must not have leaked into the pool.
     expect(result.current.data?.variableSpentCents).toBe(45000)
   })
@@ -163,7 +163,7 @@ describe('useSafeToSpend — composes DB rows into calcSafeToSpend and returns i
       plannedGoalContributionsCents: 0,
     })
 
-    expect(result.current.data).toEqual(expected)
+    expect(result.current.data).toMatchObject(expected)
   })
 
   it('goes negative (isOver) when unpaid upcoming bills exceed the remaining pool, matching calcSafeToSpend', async () => {
@@ -209,7 +209,7 @@ describe('useSafeToSpend — composes DB rows into calcSafeToSpend and returns i
       plannedGoalContributionsCents: 0,
     })
 
-    expect(result.current.data).toEqual(expected)
+    expect(result.current.data).toMatchObject(expected)
     expect(result.current.data?.isOver).toBe(true)
     expect(expected.isOver).toBe(true)
   })
@@ -230,7 +230,44 @@ describe('useSafeToSpend — composes DB rows into calcSafeToSpend and returns i
       plannedGoalContributionsCents: 0,
     })
 
-    expect(result.current.data).toEqual(expected)
+    expect(result.current.data).toMatchObject(expected)
+  })
+
+  it('exposes spentTodayCents (Nairobi day, transfers excluded) and dailyBudgetCents for the hero arc', async () => {
+    const profile: Profile = {
+      id: 'profile-hero',
+      user_id: USER_ID,
+      display_name: 'Amina',
+      cycle_anchor_day: 1,
+      expected_income_cents: 300000,
+      notification_prefs: {},
+      consent_flags: {},
+      pin_hash: null,
+      created_at: '2026-01-01',
+    }
+    const transactions: Transaction[] = [
+      // Today (NOW = Nairobi 15:00 on the 13th): an expense and a transfer.
+      txn({ kind: 'expense', amount_cents: 12000, occurred_at: '2026-07-13T08:00:00.000Z' }),
+      txn({
+        kind: 'transfer',
+        amount_cents: 500000,
+        account_id: MPESA_ID,
+        counter_account_id: CASH_ID,
+        occurred_at: '2026-07-13T09:00:00.000Z',
+      }),
+      // Earlier this period — not "today".
+      txn({ kind: 'expense', amount_cents: 30000, occurred_at: '2026-07-05T09:00:00.000Z' }),
+    ]
+    mockTables({ profile, transactions, recurring: [] })
+
+    const { result } = renderHook(() => useSafeToSpend({ now: NOW }), { wrapper })
+    await waitFor(() => expect(result.current.data).toBeDefined())
+
+    // Only today's expense counts; the transfer is excluded, the 5th is not today.
+    expect(result.current.data?.spentTodayCents).toBe(12000)
+    // Gross allowance = max(0, safeToSpend) + spentToday.
+    const d = result.current.data!
+    expect(d.dailyBudgetCents).toBe(Math.max(0, d.safeToSpendCents) + 12000)
   })
 
   it('reports no data/loading result until every underlying query has settled', async () => {
