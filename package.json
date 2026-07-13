@@ -14,6 +14,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:parser": "vitest run src/parser --passWithNoTests",
+    "test:db": "supabase test db",
     "check": "npm run typecheck && npm run lint && npm run test"
   },
   "dependencies": {
