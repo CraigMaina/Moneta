@@ -30,6 +30,9 @@
   --font-body: 'Plus Jakarta Sans', system-ui, sans-serif;
 
   --shadow-card: 0 1px 2px rgb(33 29 30 / 0.05), 0 8px 24px rgb(33 29 30 / 0.06);
+  /* Same warm ink as the card shadow, cast upward — for the bottom tab bar,
+     which must lift off scrolling content above it, not below. */
+  --shadow-bar: 0 -1px 2px rgb(33 29 30 / 0.04), 0 -8px 24px rgb(33 29 30 / 0.06);
 }
 
 @theme {
@@ -48,6 +51,7 @@
   --font-body: var(--font-body);
 
   --shadow-card: var(--shadow-card);
+  --shadow-bar: var(--shadow-bar);
 
   --radius-card: 16px;
   --radius-sheet: 24px;

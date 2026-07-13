@@ -66,6 +66,25 @@ describe('Toast', () => {
     await waitFor(() => expect(screen.queryByText('Marked paid')).not.toBeInTheDocument())
   })
 
+  it('is dismissable by keyboard via a focusable dismiss button', async () => {
+    const user = userEvent.setup()
+    render(
+      <ToastProvider>
+        <Trigger durationMs={5000} />
+      </ToastProvider>,
+    )
+
+    await user.click(screen.getByRole('button', { name: 'Show toast' }))
+    expect(await screen.findByText('Marked paid')).toBeInTheDocument()
+
+    const dismiss = screen.getByRole('button', { name: 'Dismiss notification' })
+    dismiss.focus()
+    expect(dismiss).toHaveFocus()
+    await user.keyboard('{Enter}')
+
+    await waitFor(() => expect(screen.queryByText('Marked paid')).not.toBeInTheDocument())
+  })
+
   it('throws a clear error when used outside a provider', () => {
     // Swallow the expected React error-boundary console noise for this one assertion.
     const spy = vi.spyOn(console, 'error').mockImplementation(() => {})

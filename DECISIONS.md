@@ -8,6 +8,18 @@ Each entry: date · decision · rationale · scope/impact.
 
 ---
 
+## 2026-07-13 — Phase 1 QA verdict + post-review fixes (lead)
+
+qa-reviewer returned **APPROVE WITH NITS** on Phase 1 (money path airtight, keypad + hero correct, zero new deps). Lead actioned the one required item and the high-value polish:
+
+- **Toast is now keyboard-operable (required fix — exit criterion #2).** Added a dedicated focusable `<button aria-label="Dismiss notification">` with the standard `focus-visible:ring-2 ring-coral-600` treatment inside each toast; the surrounding `role="status"` node stays the live-region announcer. `stopPropagation` avoids a double-dismiss with the existing pointer-tap handler. New test asserts focus + Enter dismisses (`Toast.test.tsx`).
+- **Hero "KES" mark de-emphasized (`SafeToSpendHero.tsx`).** The numeral now renders via `AmountDisplay withSymbol={false}` beside a muted 22px `ink-600` "KES" mark (mirroring the Keypad's readout), so the oversized tabular numeral carries the signature moment instead of a same-scale symbol diluting it. Applied to both the healthy and over-budget states. Hero tests updated to assert on the numeral node.
+- **TabBar shadow direction fixed.** Added a `--shadow-bar` token (same warm ink as `--shadow-card`, cast **upward**) and applied it to the bottom bar so it lifts off scrolling content above it rather than casting a downward shadow off-screen. The raised Add button keeps `shadow-card` (a FAB's shadow correctly points down).
+
+**Accepted contrast deviations (recorded per qa request):**
+- **White on `--coral-600` (#E8474B) ≈ 3.86:1** for the primary Button label (15px/600). This is below WCAG AA-normal (4.5:1) and the label isn't "large text". `coral-600` is a fixed CLAUDE.md brand token for primary actions, so the color can't change; accepted as a deliberate brand deviation. Mitigation: coral *text* (as opposed to coral fill) is only used at ≥24px where the 3:1 large-text bar is met; primary CTAs are large tap targets. Revisit if a formal a11y audit requires it (e.g. a subtle darkening of the label weight/size).
+- **`--amber-600` (#C77A1E) on paper ≈ 3.25:1** — fine for the hero over-state amount (52px = large text, 3:1 bar) but fails AA-normal at small sizes. **Rule going forward: the `warning` tone is only for ≥24px money** (the over-budget hero, future 80% nudges shown large). The `/kitchen-sink` demo of `AmountDisplay size="body" tone="warning"` at 15px is a dev-only gallery cell, not shipping UI, and is exempt.
+
 ## 2026-07-13 — Phase 1 Brief B: money primitives + safe-to-spend hero (design-engineer)
 
 **Scope:** `src/components/ui/{AmountDisplay,Keypad,CategoryChip,ProgressRing,SafeToSpendHero}.tsx` (+ colocated tests), 8 new glyphs in `icons.tsx`, `/kitchen-sink` sections. No files from Brief A were modified except `KitchenSink.tsx` (new sections appended) and `icons.tsx` (new exports appended).

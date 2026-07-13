@@ -52,7 +52,7 @@ export function TabBar({ onAddPress, activeOverride, position = 'fixed', classNa
     <nav
       aria-label="Primary"
       className={cn(
-        'flex h-16 items-stretch justify-between bg-paper-0 px-2 shadow-card',
+        'flex h-16 items-stretch justify-between bg-paper-0 px-2 shadow-bar',
         position === 'fixed'
           ? 'fixed inset-x-0 bottom-0 z-40 pb-[env(safe-area-inset-bottom)]'
           : 'relative',

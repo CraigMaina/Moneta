@@ -4,7 +4,7 @@ _Read this first at the start of every session. Append at the end of every sessi
 
 ## Current phase
 
-**Phase 0 — Foundation** (in progress)
+**Phase 1 — Design system: COMPLETE.** qa APPROVE WITH NITS; the one required nit (Toast keyboard dismiss) fixed + tested, hero KES mark de-emphasized, contrast deviations recorded. Phase 0 — Foundation also complete (RLS 25/25 on cloud, qa APPROVE; only optional physical-device install pending). **Next: Phase 2 — Core money loop.**
 
 ## Done
 
@@ -43,7 +43,17 @@ _Read this first at the start of every session. Append at the end of every sessi
   - `ProgressRing` — SVG progress ring (0-1, clamped via pure `clampProgress`), spring-animated fill, `prefers-reduced-motion`-aware. Basis for the hero arc and future goal rings.
   - `SafeToSpendHero` — THE signature element. Count-up numeral (0.8s tween, a documented moment-of-meaning exception to the ≤350ms motion ceiling), breathing coral arc, calm amber "You're KES X over this month" negative-state copy (never a scary red zero), fully static under `prefers-reduced-motion`.
   - All five wired into `/kitchen-sink` with every state (sizes/tones, live keypad + running `formatKES` value, chip scroller, ring at 0/25/60/100%, hero in healthy/near-zero/negative states).
-- `npm run check` (typecheck + lint + test, 86 tests across 13 files) and `npm run build` are both green.
+- `npm run check` (typecheck + lint + test, now **87 tests** across 13 files) and `npm run build` are both green.
+- **Lead visual QA at 390×844** (Chrome): verified all primitive states, the Sheet interaction (open, drag handle, X, Escape-closes-with-focus-restore, scrim), and all three hero states (healthy coral arc "KES 1,400"; near-zero; over-budget = calm amber ring "You're KES 340 over this month", no red). After the KES-mark fix, re-verified the numeral now carries the hero.
+- **qa-reviewer: APPROVE WITH NITS** (no blocking findings). Lead fixes landed: Toast keyboard dismiss (+test), hero KES de-emphasis, TabBar upward `--shadow-bar`, two contrast deviations recorded in DECISIONS.md. Remaining test-gap follow-ups (deferred, low-risk): Sheet focus-trap Tab-cycling test, ProgressRing reduced-motion assertion, Keypad `valueCents` mount-seed test.
+
+### Phase 1 exit checklist
+- [x] Primitive kit built (Button, Card, Sheet, TabBar, Toast, EmptyState, AmountDisplay, Keypad, CategoryChip, ProgressRing) + `/kitchen-sink` with every state
+- [x] Safe-to-spend hero built + polished (count-up, coral arc, reduced-motion, calm negative state)
+- [x] Keyboard focus states on every interactive element (Toast dismiss closed the last gap)
+- [x] Reduced-motion honored + verified (Sheet, Toast, ProgressRing, Hero)
+- [x] qa-reviewer design critique passes the bar (APPROVE WITH NITS; required nit resolved)
+- [x] `npm run check` green (87 tests)
 
 ## Phase exit checklist (Phase 0)
 

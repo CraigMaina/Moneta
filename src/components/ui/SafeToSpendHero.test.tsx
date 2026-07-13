@@ -23,7 +23,8 @@ describe('SafeToSpendHero', () => {
     mockMatchMedia(true)
     render(<SafeToSpendHero safeToSpendCents={140000} spentTodayCents={20000} dailyBudgetCents={50000} />)
 
-    expect(screen.getByText('KES 1,400')).toBeInTheDocument()
+    // The "KES" mark is a separate de-emphasized node; the numeral carries the value.
+    expect(screen.getByText('1,400')).toBeInTheDocument()
   })
 
   it('counts up to the final value when motion is enabled (settles on the target amount)', async () => {
@@ -33,7 +34,7 @@ describe('SafeToSpendHero', () => {
     // jsdom has no real animation-frame timing, so the tween may settle
     // synchronously or asynchronously depending on the environment — either
     // way it must land on the exact final amount, never something else.
-    await waitFor(() => expect(screen.getByText('KES 1,400')).toBeInTheDocument(), { timeout: 2000 })
+    await waitFor(() => expect(screen.getByText('1,400')).toBeInTheDocument(), { timeout: 2000 })
   })
 
   it('the negative case never renders a raw negative hero — it renders the calm "over this month" copy instead', () => {
@@ -41,8 +42,9 @@ describe('SafeToSpendHero', () => {
     render(<SafeToSpendHero safeToSpendCents={-34000} spentTodayCents={50000} dailyBudgetCents={50000} />)
 
     expect(screen.queryByText(/^-KES/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/^-/)).not.toBeInTheDocument()
     expect(screen.getByText("You're")).toBeInTheDocument()
-    expect(screen.getByText('KES 340')).toBeInTheDocument()
+    expect(screen.getByText('340')).toBeInTheDocument()
     expect(screen.getByText('over this month')).toBeInTheDocument()
   })
 

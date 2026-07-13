@@ -86,13 +86,20 @@ export function SafeToSpendHero({
           {isOver ? (
             <div className="flex flex-col items-center px-6 text-center">
               <p className="text-[15px] font-medium text-ink-600">You&apos;re</p>
-              <AmountDisplay cents={Math.abs(safeToSpendCents)} size="hero" tone="warning" className="mt-1" />
+              {/* KES mark de-emphasized so the numeral carries the moment (mirrors the Keypad). */}
+              <p className="mt-1 leading-none">
+                <span className="mr-1.5 align-top font-display text-[22px] font-semibold text-ink-600">KES</span>
+                <AmountDisplay cents={Math.abs(safeToSpendCents)} size="hero" tone="warning" withSymbol={false} />
+              </p>
               <p className="mt-1 text-[15px] font-medium text-ink-600">over this month</p>
             </div>
           ) : (
             <div className="flex flex-col items-center px-6 text-center">
               <p className="text-[15px] font-medium text-ink-600">Safe to spend today</p>
-              <AmountDisplay cents={displayCents} size="hero" tone="default" className="mt-1" />
+              <p className="mt-1 leading-none">
+                <span className="mr-1.5 align-top font-display text-[22px] font-semibold text-ink-600">KES</span>
+                <AmountDisplay cents={displayCents} size="hero" tone="default" withSymbol={false} />
+              </p>
             </div>
           )}
         </ProgressRing>

@@ -10,7 +10,7 @@ import {
 } from 'react'
 import { AnimatePresence, motion, useReducedMotion, type PanInfo } from 'framer-motion'
 import { cn } from '../../lib/cn'
-import { CheckIcon, InfoIcon, WarnIcon } from './icons'
+import { CheckIcon, CloseIcon, InfoIcon, WarnIcon } from './icons'
 
 export type ToastVariant = 'success' | 'info' | 'warn'
 
@@ -133,6 +133,21 @@ function ToastItem({ toast, onDismiss }: { toast: ToastRecord; onDismiss: (id: s
         <span className="block text-[15px] font-semibold text-ink-900">{toast.title}</span>
         {toast.description && <span className="mt-0.5 block text-[12.5px] text-ink-600">{toast.description}</span>}
       </span>
+      {/* Dedicated dismiss control so the toast is keyboard-operable and shows a
+          visible focus ring — the surrounding role="status" node stays the live
+          announcer, this button is the affordance. stopPropagation avoids a
+          double-dismiss with the card's pointer-tap handler. */}
+      <button
+        type="button"
+        aria-label="Dismiss notification"
+        onClick={(event) => {
+          event.stopPropagation()
+          onDismiss(toast.id)
+        }}
+        className="mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-ink-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral-600 focus-visible:ring-offset-1 focus-visible:ring-offset-paper-0"
+      >
+        <CloseIcon className="h-3.5 w-3.5" />
+      </button>
     </motion.div>
   )
 }
