@@ -4,7 +4,7 @@ _Read this first at the start of every session. Append at the end of every sessi
 
 ## Current phase
 
-**Phase 1 — Design system: COMPLETE.** qa APPROVE WITH NITS; the one required nit (Toast keyboard dismiss) fixed + tested, hero KES mark de-emphasized, contrast deviations recorded. Phase 0 — Foundation also complete (RLS 25/25 on cloud, qa APPROVE; only optional physical-device install pending). **Next: Phase 2 — Core money loop.**
+**Phase 2 — Core money loop (in progress, ~80%).** DONE: pure `safeToSpend.ts` calc (lead, 19 tests); typed data hooks + `useSafeToSpend` seam (feature-engineer, money-path lead-reviewed); manual-entry sheet + Home assembly (design-engineer); email magic-link/OTP auth + `SessionGate` (lead); transfer-semantics seam verified by integration test (lead — income→expense→withdrawal(transfer+fee) balances + safe-to-spend all correct). REMAINING: transactions-list screen (grouping/search/filters/swipe — design-engineer Brief D); live manual E2E (needs the user to sign in via email); formal ≥95% branch-coverage number for the safe-to-spend module; qa-reviewer Phase 2 gate. Phases 0 + 1 COMPLETE (qa APPROVE each). 179 tests green; ~19 commits.
 
 ## Done
 
