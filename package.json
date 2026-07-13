@@ -16,6 +16,7 @@
     "test:parser": "vitest run src/parser --passWithNoTests",
     "test:db": "supabase test db",
     "test:rls": "node supabase/tests/run-pgtap.mjs",
+    "gen:types": "supabase gen types typescript --project-id passrudtrwgqmimtldtt --schema public > src/lib/database.types.ts",
     "check": "npm run typecheck && npm run lint && npm run test"
   },
   "dependencies": {

@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { z } from 'zod'
+import type { Database } from './database.types'
 
 /**
  * Supabase client singleton. All Supabase access in the app goes through
@@ -32,7 +33,7 @@ const { VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY } = parsedEnv.success
   ? parsedEnv.data
   : { VITE_SUPABASE_URL: 'https://placeholder.supabase.co', VITE_SUPABASE_ANON_KEY: 'placeholder' }
 
-export const supabase = createClient(VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY, {
+export const supabase = createClient<Database>(VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
