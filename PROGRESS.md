@@ -4,7 +4,7 @@ _Read this first at the start of every session. Append at the end of every sessi
 
 ## Current phase
 
-**Phase 2 — Core money loop (in progress, ~80%).** DONE: pure `safeToSpend.ts` calc (lead, 19 tests); typed data hooks + `useSafeToSpend` seam (feature-engineer, money-path lead-reviewed); manual-entry sheet + Home assembly (design-engineer); email magic-link/OTP auth + `SessionGate` (lead); transfer-semantics seam verified by integration test (lead — income→expense→withdrawal(transfer+fee) balances + safe-to-spend all correct). REMAINING: transactions-list screen (grouping/search/filters/swipe — design-engineer Brief D); live manual E2E (needs the user to sign in via email); formal ≥95% branch-coverage number for the safe-to-spend module; qa-reviewer Phase 2 gate. Phases 0 + 1 COMPLETE (qa APPROVE each). 179 tests green; ~19 commits.
+**Phase 2 — Core money loop (in progress, ~80%).** DONE: pure `safeToSpend.ts` calc (lead, 19 tests); typed data hooks + `useSafeToSpend` seam (feature-engineer, money-path lead-reviewed); manual-entry sheet + Home assembly (design-engineer); email magic-link/OTP auth + `SessionGate` (lead); transfer-semantics seam verified by integration test (lead — income→expense→withdrawal(transfer+fee) balances + safe-to-spend all correct); `handle_new_user` signup trigger (backend-engineer, seeds profile + 3 accounts + 20 categories for every real signup — not yet run against cloud, pending lead push). REMAINING: transactions-list screen (grouping/search/filters/swipe — design-engineer Brief D); live manual E2E (needs the user to sign in via email); formal ≥95% branch-coverage number for the safe-to-spend module; qa-reviewer Phase 2 gate. Phases 0 + 1 COMPLETE (qa APPROVE each). 179 tests green; ~19 commits.
 
 ## Done
 
@@ -26,6 +26,14 @@ _Read this first at the start of every session. Append at the end of every sessi
 ## In-flight
 
 - Nothing blocking. Phase 0 is functionally complete; only the physical-device install remains (optional gate).
+
+## Phase 2 — `handle_new_user` signup trigger (backend-engineer)
+
+**Scope:** `supabase/migrations/20260714090000_create_handle_new_user_trigger.sql` (new), `supabase/tests/database/new_user.test.sql` (new). No app code touched; `supabase/seed.sql` untouched per brief.
+
+- Adds `public.handle_new_user()` (SECURITY DEFINER, `search_path = ''`, fully schema-qualified) fired by `on_auth_user_created after insert on auth.users`. For every new signup it seeds: a `profiles` row (`cycle_anchor_day=1`, `expected_income_cents=0`, `notification_prefs`/`consent_flags='{}'::jsonb`, `display_name` from `raw_user_meta_data->>'name'` if present), the 3 default accounts (M-PESA/Cash/Bank), and the full 20-row PRD §4.3 category set — verified programmatically byte-for-byte identical to `supabase/seed.sql`'s dev-user seed data. All inserts `on conflict ... do nothing` on the tables' existing unique constraints (`accounts`/`categories`: `(user_id, name)`; `profiles`: `(user_id)`), and every row is hardcoded to `user_id = new.id`.
+- pgTAP test `new_user.test.sql` (plan 5, self-rolling-back): inserts a synthetic `auth.users` row and asserts exactly 1 profile, exactly 3 accounts, exactly 20 categories, plus spot-checks for `M-PESA` and `Food & Groceries`.
+- `npm run check` reconfirmed green (179 tests, unaffected — this slice is pure SQL). **Not yet run against cloud** (Docker-free environment, per prior entries) — the lead needs to `supabase db push` this migration then run `SUPABASE_DB_URL=… node supabase/tests/run-pgtap.mjs supabase/tests/database/new_user.test.sql`. Full rationale in DECISIONS.md.
 
 ## Next
 

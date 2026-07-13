@@ -123,9 +123,12 @@ insert into auth.users (id, email) values
   ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'user-a@test.moneta'),
   ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'user-b@test.moneta');
 
--- Seed one account per user as the table owner (bypasses RLS, as intended
--- for direct superuser setup — mirrors how a service-role/admin task would
--- write these rows outside of a user's own session).
+-- Seed one named account per user as the table owner (bypasses RLS, as
+-- intended for direct superuser setup). NOTE: inserting the auth.users rows
+-- above also fired handle_new_user, which auto-seeds each user 3 default
+-- accounts + categories — so these are NOT the users' only accounts. The
+-- assertions below therefore test the RLS *property* (each user sees their own
+-- named account and never the other's), not exact row counts.
 insert into public.accounts (id, user_id, name, type) values
   ('cccccccc-cccc-cccc-cccc-cccccccccccc', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'A Wallet', 'cash'),
   ('dddddddd-dddd-dddd-dddd-dddddddddddd', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'B Wallet', 'cash');
@@ -145,15 +148,15 @@ select set_config(
 );
 
 select is(
-  (select count(*)::int from public.accounts),
+  (select count(*)::int from public.accounts where name = 'A Wallet'),
   1,
-  'user A sees exactly one account row under RLS'
+  'user A sees their own account'
 );
 
 select is(
-  (select name from public.accounts limit 1),
-  'A Wallet',
-  'user A sees only their own account'
+  (select count(*)::int from public.accounts where name = 'B Wallet'),
+  0,
+  'user A cannot see user B''s account (by name)'
 );
 
 select is(
@@ -195,15 +198,15 @@ select set_config(
 );
 
 select is(
-  (select count(*)::int from public.accounts),
+  (select count(*)::int from public.accounts where name = 'B Wallet'),
   1,
-  'user B sees exactly one account row under RLS'
+  'user B sees their own account'
 );
 
 select is(
-  (select name from public.accounts limit 1),
-  'B Wallet',
-  'user B sees only their own account'
+  (select count(*)::int from public.accounts where name = 'A Wallet'),
+  0,
+  'user B cannot see user A''s account (by name)'
 );
 
 reset role;
