@@ -21,23 +21,26 @@ _Read this first at the start of every session. Append at the end of every sessi
 - `qa-reviewer` returned **APPROVE WITH NITS** on Phase 0 (no blocking findings). Verified green: `npm run check`, schema-matches-§7 (all 10 tables + view walked field-by-field), RLS present + correct on all tables by inspection, money rules honored end-to-end, PWA build (manifest incl. `share_target` + SW). Left unverifiable pending Docker/device: the pgTAP RLS *execution* and on-device install.
 - **Lead post-review polish** (all green, committed): tightened `transactions.amount_cents` to `> 0`; strengthened the RLS pgTAP suite (22 → 25) with a no-open-policy assertion + `transactions` cross-user denial; deduped PWA precache (34 → 33); hardened `supabase.ts` to throw on bad env in PROD. Details in DECISIONS.md.
 
+- **DB verified against Supabase cloud** (project `passrudtrwgqmimtldtt`, eu-central-1). `supabase db push` applied all 11 migrations cleanly to real Postgres. The pgTAP RLS suite **passes 25/25** via the new Docker-free runner (`npm run test:rls`, since `supabase test db` needs Docker). See DECISIONS.md.
+
 ## In-flight
 
-- **DB verification via Supabase cloud** (user chose this over local Docker — DECISIONS.md). User is creating a cloud project + linking the CLI. Once linked: `supabase db push` applies migrations to real Postgres and `supabase test db --db-url …` runs the strengthened pgTAP RLS suite. This closes the last verifiable Phase 0 exit box.
+- Nothing blocking. Phase 0 is functionally complete; only the physical-device install remains (optional gate).
 
 ## Next
 
-- On user confirming CLI is linked: verify `db push` succeeds and the pgTAP RLS suite (25 assertions) passes against the cloud DB; then generate `src/lib/database.types.ts` from the live schema and wire it into the Supabase client types.
-- Then declare Phase 0 done and open **Phase 1 — Design system** (design-engineer: tokens as Tailwind theme + CSS vars already scaffolded → primitive kit + `/kitchen-sink` + safe-to-spend hero).
+- **User action:** rotate the Supabase DB password (it entered the transcript during verification) — dashboard → Database → reset password.
+- Generate `src/lib/database.types.ts` when convenient (needs Docker or a Supabase access token via `gen types --project-id`) — deferred, feeds Phase 2.
+- Decide: kick off **Phase 1 — Design system** (design-engineer: primitive kit + `/kitchen-sink` + safe-to-spend hero; tokens already scaffolded). Can start now.
 
 ## Phase exit checklist (Phase 0)
 
 - [x] `npm run check` green
-- [x] Installable empty-shell PWA builds with manifest (incl. `share_target`) + service worker (`npm run build` verified locally; not yet installed on a physical device)
-- [x] Schema matches PRD §7 — all 10 tables + `account_balances` view, migrations in `supabase/migrations/` (confirmed by qa-reviewer)
+- [x] Installable empty-shell PWA builds with manifest (incl. `share_target`) + service worker (`npm run build` verified; not yet installed on a physical device)
+- [x] Schema matches PRD §7 — all 10 tables + `account_balances` view (confirmed by qa-reviewer)
 - [x] qa-reviewer returns APPROVE (APPROVE WITH NITS; nits actioned or deferred-with-record)
-- [ ] RLS assertion test passes — suite strengthened to 25 assertions but **unexecuted**; closing via the Supabase cloud `db push` + `test db` path (in-flight)
-- [ ] Empty-shell PWA installed + running on a physical phone (build verified; on-device pending)
+- [x] RLS assertion test passes — **25/25 against cloud Postgres** via `npm run test:rls`
+- [ ] Empty-shell PWA installed + running on a physical phone (build verified; on-device install pending — optional, needs your phone)
 
 ## Known incident (see DECISIONS.md for full detail)
 

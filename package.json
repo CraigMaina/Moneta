@@ -15,6 +15,7 @@
     "test:watch": "vitest",
     "test:parser": "vitest run src/parser --passWithNoTests",
     "test:db": "supabase test db",
+    "test:rls": "node supabase/tests/run-pgtap.mjs",
     "check": "npm run typecheck && npm run lint && npm run test"
   },
   "dependencies": {
@@ -51,6 +52,7 @@
     "fake-indexeddb": "^6.2.5",
     "globals": "^17.7.0",
     "jsdom": "^29.1.1",
+    "pg": "^8.22.0",
     "prettier": "^3.9.5",
     "tailwindcss": "^4.3.2",
     "typescript": "~6.0.2",

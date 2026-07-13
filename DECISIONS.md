@@ -8,6 +8,15 @@ Each entry: date · decision · rationale · scope/impact.
 
 ---
 
+## 2026-07-13 — RLS suite executed against cloud; Docker-free pgTAP runner (lead)
+
+- **RLS assertion test PASSES: 25/25** against the live Supabase cloud Postgres (project `passrudtrwgqmimtldtt`, eu-central-1). Every public table has RLS on + 4 policies, no permissive-open policy, and cross-user read/insert denial is verified on both `accounts` and `transactions`. This closes the Phase 0 RLS exit criterion.
+- **`supabase test db` cannot run here** — it launches its pgTAP runner inside a Docker/podman container (`LegacyDockerRunError`), and this machine has neither. Same for `supabase gen types --db-url`/`--local` (spawns the `postgres-meta` container) and `supabase db push`'s catalog cache.
+- **Decision: committed a Docker-free pgTAP runner** at `supabase/tests/run-pgtap.mjs`, exposed as `npm run test:rls`. It executes any pgTAP `.sql` file directly over a Postgres connection (via `pg`) and prints TAP. Rationale: CLAUDE.md requires the RLS test never be skipped, and with no Docker this is the only way to keep it runnable after each migration. The connection string is read **only** from `SUPABASE_DB_URL` (env), never hardcoded or passed on the CLI; must use the session-mode connection (port 5432), since the suite's `SET LOCAL ROLE`/`set_config` needs a real session (the 6543 transaction pooler would reject it). `npm run test:db` (the Docker/`supabase test db` path) is kept for environments that have Docker.
+- **Dependency added: `pg` (^8.22.0, devDependency)** — the Postgres client driving the Docker-free runner. Test-tooling only; never imported by app code. Recorded here per the "no dependency without a reason" rule.
+- **`database.types.ts` generation deferred** — needs either Docker/podman (`gen types --db-url`) or a Supabase personal access token (`gen types --project-id`, which uses the hosted platform API and needs no container). Not a Phase 0 exit criterion; the feature phases (Phase 2+) will need it, so generate it then via the access-token path or in a Docker-capable env. Until then, hooks type Supabase results explicitly/with zod at the boundary (CLAUDE.md already requires zod there).
+- **Secret hygiene:** the DB password appeared in the session transcript during `db push`/verification. The user has been asked to rotate it (dashboard → Database → reset password) now that verification is complete.
+
 ## 2026-07-13 — Phase 0 QA verdict + post-review polish (lead)
 
 qa-reviewer returned **APPROVE WITH NITS** on Phase 0 (no blocking findings). Before the cloud `db push`, the lead folded in the high-value nits so the push validates the final schema:
