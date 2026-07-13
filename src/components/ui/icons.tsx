@@ -108,3 +108,87 @@ export function ReceiptIcon({ className }: IconProps) {
     </svg>
   )
 }
+
+export function BackspaceIcon({ className }: IconProps) {
+  return (
+    <svg {...BASE_PROPS} className={className}>
+      <path d="M9 5h10a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H9l-6-7 6-7Z" />
+      <path d="M13 10.5 17 14M17 10.5 13 14" />
+    </svg>
+  )
+}
+
+/*
+ * Category glyphs — a representative subset of the PRD §4.3 default category
+ * set (most-used-first: Groceries, Eating Out, Transport, Airtime, Shopping,
+ * Entertainment, Other), enough to exercise `CategoryChip` in every state.
+ * Rent & Utilities reuses `HomeIcon` below rather than a near-duplicate house
+ * glyph. The full category icon set is deferred to the categories feature
+ * (Phase 2) — see DECISIONS.md.
+ */
+
+export function GroceriesIcon({ className }: IconProps) {
+  return (
+    <svg {...BASE_PROPS} className={className}>
+      <path d="M4 9h16l-1.4 10.3a2 2 0 0 1-2 1.7H7.4a2 2 0 0 1-2-1.7L4 9Z" />
+      <path d="M8 9V7a4 4 0 0 1 8 0v2" />
+    </svg>
+  )
+}
+
+export function EatingOutIcon({ className }: IconProps) {
+  return (
+    <svg {...BASE_PROPS} className={className}>
+      <path d="M6 3v6a1.5 1.5 0 0 0 3 0V3M7.5 3v18" />
+      <path d="M17 3c-1.4 0-2.5 1.8-2.5 5s1.1 4 2.5 4v9" />
+    </svg>
+  )
+}
+
+export function TransportIcon({ className }: IconProps) {
+  return (
+    <svg {...BASE_PROPS} className={className}>
+      <path d="M4 16V10a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v6" />
+      <path d="M4 16h16M6 8l1.4-4h9L18 8" />
+      <circle cx="7.5" cy="18.5" r="1.2" fill="currentColor" stroke="none" />
+      <circle cx="16.5" cy="18.5" r="1.2" fill="currentColor" stroke="none" />
+    </svg>
+  )
+}
+
+export function AirtimeIcon({ className }: IconProps) {
+  return (
+    <svg {...BASE_PROPS} className={className}>
+      <rect x="7" y="3" width="10" height="18" rx="2" />
+      <path d="M11 18h2" />
+    </svg>
+  )
+}
+
+export function ShoppingIcon({ className }: IconProps) {
+  return (
+    <svg {...BASE_PROPS} className={className}>
+      <path d="M6 8h12l-1 12a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L6 8Z" />
+      <path d="M9 8V6a3 3 0 0 1 6 0v2" />
+    </svg>
+  )
+}
+
+export function EntertainmentIcon({ className }: IconProps) {
+  return (
+    <svg {...BASE_PROPS} className={className}>
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="M10 9l5 3-5 3V9Z" fill="currentColor" stroke="none" />
+    </svg>
+  )
+}
+
+export function OtherIcon({ className }: IconProps) {
+  return (
+    <svg {...BASE_PROPS} className={className}>
+      <circle cx="6" cy="12" r="1.3" fill="currentColor" stroke="none" />
+      <circle cx="12" cy="12" r="1.3" fill="currentColor" stroke="none" />
+      <circle cx="18" cy="12" r="1.3" fill="currentColor" stroke="none" />
+    </svg>
+  )
+}

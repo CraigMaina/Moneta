@@ -33,6 +33,18 @@ _Read this first at the start of every session. Append at the end of every sessi
 - Generate `src/lib/database.types.ts` when convenient (needs Docker or a Supabase access token via `gen types --project-id`) — deferred, feeds Phase 2.
 - Decide: kick off **Phase 1 — Design system** (design-engineer: primitive kit + `/kitchen-sink` + safe-to-spend hero; tokens already scaffolded). Can start now.
 
+## Phase 1 — Design system (in progress)
+
+- **Brief A (design-engineer)** landed the core primitive kit: `Button`, `Card`, `Sheet`, `TabBar`, `Toast`/`useToast`, `EmptyState`, `icons.tsx`, `src/lib/cn.ts`, and `/kitchen-sink`. Not modified in Brief B except to add new sections.
+- **Brief B (design-engineer)** landed the money primitives + the signature safe-to-spend hero, all in `src/components/ui/`:
+  - `AmountDisplay` — the canonical money renderer (`hero`/`title`/`body` sizes, `default`/`income`/`expense`/`warning` tones, `signed` prefix), always through `formatKES`, always `tabular-nums`.
+  - `Keypad` — the oversized numeric entry pad (PRD F4). Pure, exhaustively-tested cents math: `applyKeypadKey`, `keypadStateToCents`, `centsToKeypadState`, `formatKeypadBuffer`. Never a float touches the money path — digit groups are parsed with `parseInt`, never `parseFloat`.
+  - `CategoryChip` — selectable pill (icon + label), 44px floor, horizontal-scroller ready. 6 new category glyphs added to `icons.tsx` (`GroceriesIcon`, `EatingOutIcon`, `TransportIcon`, `AirtimeIcon`, `ShoppingIcon`, `EntertainmentIcon`, `OtherIcon`, `BackspaceIcon`) — a representative subset of PRD §4.3's category set, not exhaustive (Rent & Utilities reuses the existing `HomeIcon`). Full category icon set deferred to the categories feature.
+  - `ProgressRing` — SVG progress ring (0-1, clamped via pure `clampProgress`), spring-animated fill, `prefers-reduced-motion`-aware. Basis for the hero arc and future goal rings.
+  - `SafeToSpendHero` — THE signature element. Count-up numeral (0.8s tween, a documented moment-of-meaning exception to the ≤350ms motion ceiling), breathing coral arc, calm amber "You're KES X over this month" negative-state copy (never a scary red zero), fully static under `prefers-reduced-motion`.
+  - All five wired into `/kitchen-sink` with every state (sizes/tones, live keypad + running `formatKES` value, chip scroller, ring at 0/25/60/100%, hero in healthy/near-zero/negative states).
+- `npm run check` (typecheck + lint + test, 86 tests across 13 files) and `npm run build` are both green.
+
 ## Phase exit checklist (Phase 0)
 
 - [x] `npm run check` green
