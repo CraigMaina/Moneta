@@ -29,9 +29,9 @@ _Read this first at the start of every session. Append at the end of every sessi
 
 ## Next
 
-- **User action:** rotate the Supabase DB password (it entered the transcript during verification) — dashboard → Database → reset password.
-- Generate `src/lib/database.types.ts` when convenient (needs Docker or a Supabase access token via `gen types --project-id`) — deferred, feeds Phase 2.
-- Decide: kick off **Phase 1 — Design system** (design-engineer: primitive kit + `/kitchen-sink` + safe-to-spend hero; tokens already scaffolded). Can start now.
+- **User action (security):** rotate the Supabase DB password AND revoke the `sbp_` personal access token (both entered the transcript) — dashboard → Database → reset password; Account → Access Tokens → revoke.
+- **Phase 2 in progress:** safe-to-spend calc done (lead, `ce4de1f`). `.env` wired (anon key); `database.types.ts` generated from the live schema, client now `createClient<Database>` (`5aad211`; `npm run gen:types` regenerates). **feature-engineer building the data hooks + `useSafeToSpend` adapter** (in flight). Then design-engineer: manual-entry sheet + transactions list + Home; lead verifies transfer seam; qa gate.
+- **Auth gap:** no sign-in UI yet — hooks assume a `supabase.auth` session (tests mock it). Lead to wire a minimal/dev auth so the Phase 2 live E2E exit (income→expense→transfer totals) can run.
 
 ## Phase 1 — Design system (in progress)
 
@@ -67,3 +67,34 @@ _Read this first at the start of every session. Append at the end of every sessi
 ## Known incident (see DECISIONS.md for full detail)
 
 - An unscoped `npx prettier --write .` during Phase 0 formatting touched `moneta-prd.md`, `moneta-master-prompt.md`, `.claude/agents/*.md`, and `CLAUDE.md`. `CLAUDE.md` was restored exactly (verified line-for-line against the verbatim copy read earlier in-session). The other four were not byte-verifiable against a pre-edit copy; spot checks show whitespace/emphasis-marker-only changes, no wording changes. `.prettierignore` and the `format` script are now scoped to prevent recurrence. Recommend a human diff/skim of those four files.
+
+## Phase 2 — Core money loop: typed data layer (feature-engineer)
+
+**Scope:** `src/features/transactions/` — queries, mutations, boundary zod schemas, the `useSafeToSpend` money-path seam, and their colocated tests. No UI/screens (per brief; the design-engineer builds screens next against these hook signatures). No files outside `src/features/transactions/` and `src/test/supabaseTestHelpers.ts` were touched.
+
+**Files added:**
+- `src/features/transactions/types.ts` — `Account`/`Category`/`Profile`/`RecurringItem`/`Transaction`/`TransactionInsert`/`TransactionUpdate`/`AccountBalance`/`TransactionKind`/`TransactionSource`, all derived from `database.types.ts` (no hand-written row shapes).
+- `src/features/transactions/queryKeys.ts` — key factories, every key namespaced by `userId`.
+- `src/features/transactions/nairobiDate.ts` (+ test) — `toNairobiDateString(date)`, a `yyyy-MM-dd` Nairobi-zone formatter for comparing instants against the plain-`date` `recurring_items.next_due_date` column.
+- `src/features/transactions/hooks/useAuthUserId.ts` (+ test) — reads `supabase.auth.getSession()`/`onAuthStateChange`; every hook below is `enabled` only once this resolves to a real id.
+- `src/features/transactions/queries.ts` (+ test) — `useAccounts()`, `useCategories()`, `useTransactions(options?: { from?, to?, limit? })` (ordered `occurred_at desc`), `useAccountBalances()` (reads the `account_balances` view), `useProfile()` (single row via `maybeSingle`), `useUpcomingRecurringBills({ from, to })` (raw `recurring_items` rows, `kind='expense'`, `next_due_date` in range).
+- `src/features/transactions/schemas.ts` (+ test) — `addTransactionSchema`/`updateTransactionSchema` (zod), mirroring the DB CHECK constraints (positive integer `amount_cents`, transfer ⇔ `counter_account_id` set and ≠ `account_id`, transfer ⇒ `category_id` null).
+- `src/features/transactions/balanceDelta.ts` (+ test) — pure `transactionBalanceDeltas`/`applyBalanceDeltas`/`negateDeltas`, mirroring the `account_balances` SQL view's math exactly (never touches `fee_cents`) so optimistic-cache patches can't drift from server truth.
+- `src/features/transactions/mutations.ts` (+ test) — `useAddTransaction()`, `useUpdateTransaction()` (`{ id, patch }`), `useDeleteTransaction()` (`id: string`); all optimistic (patch both the transaction list AND `account_balances`) with `onError` rollback via cache snapshots, `onSettled` invalidation. `user_id` is always injected from the session, never trusted from caller input.
+- `src/features/transactions/useSafeToSpend.ts` (+ test) — THE money-path seam. Composes `useProfile` + `useTransactions` (bounded to `[periodStart, now]`) + `useUpcomingRecurringBills` (bounded to `[now, periodEnd]`, summed) into `calcSafeToSpend`'s input and returns its result unmodified.
+- `src/test/supabaseTestHelpers.ts` — shared, framework-agnostic fake for supabase-js's chainable query builder (`chainable`, `ok`, `fail`, `fakeAuthSession`), used across all the above tests so none touch a live Supabase project/session.
+
+**`npm run check` green** (typecheck + lint + `vitest run`): 21 test files, 161 tests (up from 87 at the end of Phase 1; 55 new tests in this slice). `npm run build` also verified green.
+
+**`useSafeToSpend` mapping (DB rows → `calcSafeToSpend` input) — the part the lead should review closely:**
+- `profiles.expected_income_cents` → `expectedIncomeCents` (passed through unmodified — the calc itself does `max(declared, received-so-far)`, never pre-maxed by the hook). `profiles.cycle_anchor_day` → `cycleAnchorDay`. If no `profiles` row exists yet, the hook falls back to `0`/`1` rather than blocking indefinitely (see DECISIONS.md).
+- `transactions` fetched bounded to `[periodStart, now]` (computed via `currentPeriod` from the profile's anchor) → mapped 1:1 to `CalcTxn[]` (`kind`/`amount_cents→amountCents`/`occurred_at→occurredAt`), unfiltered by kind — transfer-exclusion is `calcSafeToSpend`'s job, verified by a test transaction with a huge transfer amount that doesn't move the result.
+- `recurring_items` fetched bounded to `next_due_date ∈ [today, periodEnd]` (as Nairobi calendar-date strings, `kind='expense'` only), summed client-side → `upcomingFixedBillsCents`. This is deliberately the not-yet-due remainder, not the full period's bills (matches the brief exactly and the existing DECISIONS.md semantics entry — avoids double-counting already-paid bills, which are already ordinary `expense` rows inside the transactions sum above).
+- `plannedGoalContributionsCents` hardcoded to `0` (no goal-planning model exists yet) — overridable via `useSafeToSpend({ plannedGoalContributionsCents })` for whenever that model lands.
+- Test coverage: a full composition test (income + expense + a huge transfer + one upcoming bill) asserting the hook's `data` deep-equals a direct `calcSafeToSpend(...)` call built from the same raw inputs; a custom-cycle-anchor variant; a negative/`isOver` variant driven by an upcoming bill exceeding the pool; a no-profile-row fallback variant; and a loading-state variant.
+
+**Assumptions recorded in DECISIONS.md (see there for full rationale):** `useSafeToSpend`/`useProfile` placement in `transactions/` rather than a `settings/` feature; `recurring_items` filtered to `kind='expense'` for the bills sum (a recurring income/transfer template isn't a "bill"); missing-profile-row fallback to 0/day-1 rather than blocking; update-schema cross-field invariants only enforced when the patch itself carries the relevant fields together (DB CHECKs are the final guard for partial patches); a Docker-free, vi/supabase-free `chainable()` test fake standing in for the real `PostgrestFilterBuilder`.
+
+**Live E2E note (per brief):** confirmed — there is still no sign-in UI. Every hook here reads `supabase.auth` and stays `enabled: false`/errors cleanly with no session; a minimal/dev auth wiring is needed before these hooks do anything against the live cloud project, exactly as the brief anticipated. All tests here mock `supabase` entirely (`src/test/supabaseTestHelpers.ts`) and need no network/session.
+
+**Not committed** — left for the lead to review the money-path seam and commit, per brief instructions.
