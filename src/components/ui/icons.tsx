@@ -192,3 +192,30 @@ export function OtherIcon({ className }: IconProps) {
     </svg>
   )
 }
+
+/*
+ * Account-type glyphs, added for the manual-entry sheet's account chips
+ * (Phase 2). `AirtimeIcon` above already reads as a handset, so it doubles as
+ * the M-PESA/mobile-money glyph; these two cover Cash and Bank, the other two
+ * seeded account types. See DECISIONS.md.
+ */
+
+export function CashIcon({ className }: IconProps) {
+  return (
+    <svg {...BASE_PROPS} className={className}>
+      <rect x="3" y="6" width="18" height="12" rx="2" />
+      <circle cx="12" cy="12" r="2.5" />
+      <path d="M6.5 9h.01M17.5 15h.01" />
+    </svg>
+  )
+}
+
+export function BankIcon({ className }: IconProps) {
+  return (
+    <svg {...BASE_PROPS} className={className}>
+      <path d="M4 10 12 4l8 6" />
+      <path d="M5 10v9M9.5 10v9M14.5 10v9M19 10v9" />
+      <path d="M3 21h18" />
+    </svg>
+  )
+}
