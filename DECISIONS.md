@@ -8,6 +8,16 @@ Each entry: date · decision · rationale · scope/impact.
 
 ---
 
+## 2026-07-13 — Phase 2 start: safe-to-spend calculator semantics (lead)
+
+`src/lib/safeToSpend.ts` — the pure, exhaustively-tested hero calculator (19 tests; the master prompt reserves the money path for the lead). Two semantic decisions the PRD formula left implicit:
+
+- **`expected_income` = max(declared typical income, income actually received this period).** PRD §4.5 says "whichever is greater is used, so a bonus raises the number." Implemented as `Math.max` — declared income is the floor, real income can only raise the number, never lower it.
+- **`fixed_bills_this_period` is passed as bills still DUE later in the period (not yet paid), NOT the full month's bills.** This avoids the classic double-count: a bill already paid is an ordinary `expense` transaction already inside `variable_spend_so_far`; if we also reserved the full month's fixed bills, that paid bill would be subtracted twice. So the caller (the hooks layer, Phase 2) passes only the not-yet-paid remainder as `upcomingFixedBillsCents`. The transactions table has no `recurring_item_id` link in v1, so "which expenses are bill payments" can't be derived from data — this split sidesteps that cleanly. Same reasoning for `plannedGoalContributionsCents` (remainder planned, not the whole period).
+- **Over-budget is a PERIOD TOTAL, not per-day.** When the pool is negative, `safeToSpendCents` is the negative pool itself (e.g. −40000), because PRD §4.5 shows "You're KES X over this **month**" — a total. On track (pool ≥ 0), it's `floor(pool / daysRemaining)` (floored so a fractional cent is never over-promised). `SafeToSpendHero` already keys its calm amber over-state on `safeToSpendCents < 0`.
+- **Transfers are excluded structurally, not by discipline** — the calc `continue`s on `kind === 'transfer'`, guarded by a test that a huge withdrawal never moves the number. All day/period math is Africa/Nairobi via `@date-fns/tz` `TZDate`, verified with a device-at-22:30-UTC test that correctly reads the next Nairobi day. Non-integer cents throw (no float in the money path).
+- **Refunds/reversals are an upstream (parser/data) concern, not the calc's.** The calculator trusts its transaction inputs; a reversed expense must be reconciled away (deleted/offset by `mpesa_ref`) before it reaches here, per the parser's dedupe/reversal handling (Phase 3). The calc's own guarantee is narrower and absolute: transfers never count, and only income/expense within the period up to `now` do.
+
 ## 2026-07-13 — Phase 1 QA verdict + post-review fixes (lead)
 
 qa-reviewer returned **APPROVE WITH NITS** on Phase 1 (money path airtight, keypad + hero correct, zero new deps). Lead actioned the one required item and the high-value polish:
