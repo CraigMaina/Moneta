@@ -6,18 +6,30 @@ import { Goals } from './routes/Goals'
 import { Insights } from './routes/Insights'
 import { KitchenSink } from './routes/KitchenSink'
 import { ToastProvider } from './components/ui/Toast'
+import { SessionGate } from './features/auth/SessionGate'
 
 export function App() {
   return (
     <ToastProvider>
       <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/add" element={<Add />} />
-        <Route path="/transactions" element={<Transactions />} />
-        <Route path="/goals" element={<Goals />} />
-        <Route path="/insights" element={<Insights />} />
-        {/* Direct-URL only, not in the tab bar — the primitive-kit visual QA surface. */}
+        {/* Direct-URL only, not in the tab bar — the primitive-kit visual QA
+            surface. Kept outside the session gate so primitives can be reviewed
+            without a login. */}
         <Route path="/kitchen-sink" element={<KitchenSink />} />
+        <Route
+          path="/*"
+          element={
+            <SessionGate>
+              <Routes>
+                <Route path="/" element={<Home />} />
+                <Route path="/add" element={<Add />} />
+                <Route path="/transactions" element={<Transactions />} />
+                <Route path="/goals" element={<Goals />} />
+                <Route path="/insights" element={<Insights />} />
+              </Routes>
+            </SessionGate>
+          }
+        />
       </Routes>
     </ToastProvider>
   )
