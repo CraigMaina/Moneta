@@ -34,6 +34,10 @@ export const profileKeys = {
   detail: (userId: string | undefined) => ['profile', userId] as const,
 }
 
+export const merchantRuleKeys = {
+  all: (userId: string | undefined) => ['merchantRules', userId] as const,
+}
+
 export const recurringItemKeys = {
   upcomingBills: (userId: string | undefined, fromDate: string, toDate: string) =>
     ['recurringItems', userId, 'upcomingBills', fromDate, toDate] as const,
