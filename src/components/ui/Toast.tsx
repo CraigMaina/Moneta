@@ -14,12 +14,20 @@ import { CheckIcon, CloseIcon, InfoIcon, WarnIcon } from './icons'
 
 export type ToastVariant = 'success' | 'info' | 'warn'
 
+export interface ToastAction {
+  /** Short verb, e.g. "Undo". */
+  label: string
+  onClick: () => void
+}
+
 export interface ToastOptions {
   title: string
   description?: string
   variant?: ToastVariant
   /** Auto-dismiss delay in ms. Default 4000. */
   durationMs?: number
+  /** An optional inline action (e.g. "Undo" after a delete). Dismisses the toast once clicked. */
+  action?: ToastAction
 }
 
 interface ToastRecord {
@@ -28,6 +36,7 @@ interface ToastRecord {
   description?: string
   variant: ToastVariant
   durationMs: number
+  action?: ToastAction
 }
 
 interface ToastContextValue {
@@ -133,6 +142,22 @@ function ToastItem({ toast, onDismiss }: { toast: ToastRecord; onDismiss: (id: s
         <span className="block text-[15px] font-semibold text-ink-900">{toast.title}</span>
         {toast.description && <span className="mt-0.5 block text-[12.5px] text-ink-600">{toast.description}</span>}
       </span>
+      {/* Inline action (e.g. "Undo") — same keyboard/stopPropagation treatment
+          as the dismiss button below so it doesn't double-fire the card's tap
+          handler. Runs the action, then dismisses. */}
+      {toast.action && (
+        <button
+          type="button"
+          onClick={(event) => {
+            event.stopPropagation()
+            toast.action?.onClick()
+            onDismiss(toast.id)
+          }}
+          className="mt-0.5 flex-shrink-0 rounded-full px-2 py-1 text-[13px] font-semibold text-coral-600 hover:bg-coral-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral-600 focus-visible:ring-offset-1 focus-visible:ring-offset-paper-0"
+        >
+          {toast.action.label}
+        </button>
+      )}
       {/* Dedicated dismiss control so the toast is keyboard-operable and shows a
           visible focus ring — the surrounding role="status" node stays the live
           announcer, this button is the affordance. stopPropagation avoids a
@@ -168,6 +193,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         description: options.description,
         variant: options.variant ?? 'info',
         durationMs: options.durationMs ?? DEFAULT_DURATION_MS,
+        action: options.action,
       },
       ...current,
     ])

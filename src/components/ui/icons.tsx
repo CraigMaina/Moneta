@@ -219,3 +219,36 @@ export function BankIcon({ className }: IconProps) {
     </svg>
   )
 }
+
+/*
+ * Added for the Transactions list screen (Phase 2): a search field glyph, and
+ * the two swipe/quick-action glyphs (recategorize, delete). See DECISIONS.md.
+ */
+
+export function SearchIcon({ className }: IconProps) {
+  return (
+    <svg {...BASE_PROPS} className={className}>
+      <circle cx="10.5" cy="10.5" r="6.5" />
+      <path d="m20 20-4.3-4.3" />
+    </svg>
+  )
+}
+
+export function TagIcon({ className }: IconProps) {
+  return (
+    <svg {...BASE_PROPS} className={className}>
+      <path d="M12.5 3H19a2 2 0 0 1 2 2v6.5a2 2 0 0 1-.6 1.4l-8 8a2 2 0 0 1-2.8 0l-6.5-6.5a2 2 0 0 1 0-2.8l8-8A2 2 0 0 1 12.5 3Z" />
+      <circle cx="16" cy="8" r="1.3" fill="currentColor" stroke="none" />
+    </svg>
+  )
+}
+
+export function TrashIcon({ className }: IconProps) {
+  return (
+    <svg {...BASE_PROPS} className={className}>
+      <path d="M5 7h14M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+      <path d="M7 7l1 12.5A2 2 0 0 0 10 21h4a2 2 0 0 0 2-1.5L17 7" />
+      <path d="M10 11v6M14 11v6" />
+    </svg>
+  )
+}

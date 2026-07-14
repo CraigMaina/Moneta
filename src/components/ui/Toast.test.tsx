@@ -85,6 +85,36 @@ describe('Toast', () => {
     await waitFor(() => expect(screen.queryByText('Marked paid')).not.toBeInTheDocument())
   })
 
+  it('runs an inline action and dismisses when the action button is clicked', async () => {
+    const onAction = vi.fn()
+    function ActionTrigger() {
+      const { showToast } = useToast()
+      return (
+        <button
+          onClick={() =>
+            showToast({ title: 'Deleted', description: 'Naivas', variant: 'info', action: { label: 'Undo', onClick: onAction } })
+          }
+        >
+          Show toast
+        </button>
+      )
+    }
+    const user = userEvent.setup()
+    render(
+      <ToastProvider>
+        <ActionTrigger />
+      </ToastProvider>,
+    )
+
+    await user.click(screen.getByRole('button', { name: 'Show toast' }))
+    expect(await screen.findByText('Deleted')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Undo' }))
+
+    expect(onAction).toHaveBeenCalledTimes(1)
+    await waitFor(() => expect(screen.queryByText('Deleted')).not.toBeInTheDocument())
+  })
+
   it('throws a clear error when used outside a provider', () => {
     // Swallow the expected React error-boundary console noise for this one assertion.
     const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
