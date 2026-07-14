@@ -25,7 +25,13 @@ export function useAccounts() {
     enabled: Boolean(userId),
     staleTime: SLOW_MOVING_STALE_TIME_MS,
     queryFn: async (): Promise<Account[]> => {
-      const { data, error } = await supabase.from('accounts').select('*').order('created_at', { ascending: true })
+      // Archived accounts (soft-deleted in Settings) stay out of every picker,
+      // filter, and balance list — their past transactions remain intact.
+      const { data, error } = await supabase
+        .from('accounts')
+        .select('*')
+        .is('archived_at', null)
+        .order('created_at', { ascending: true })
       if (error) throw error
       return data ?? []
     },
@@ -39,7 +45,13 @@ export function useCategories() {
     enabled: Boolean(userId),
     staleTime: SLOW_MOVING_STALE_TIME_MS,
     queryFn: async (): Promise<Category[]> => {
-      const { data, error } = await supabase.from('categories').select('*').order('sort_order', { ascending: true })
+      // Archived categories (soft-deleted in Settings) stay out of the pickers
+      // and filters; transactions already categorized under them are untouched.
+      const { data, error } = await supabase
+        .from('categories')
+        .select('*')
+        .is('archived_at', null)
+        .order('sort_order', { ascending: true })
       if (error) throw error
       return data ?? []
     },

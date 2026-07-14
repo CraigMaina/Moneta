@@ -250,3 +250,18 @@ All three deferrals from the parser phase are now implemented, tested, and commi
 - Live wow-moment walkthrough at 390×844 (paste → transform → confirm → save) — still pending a manual pass (browser-automation input timeouts earlier; app renders clean).
 - Device verification of the GET share target (share from Android Messages → confirmation card ≤3s) — needs a physical install.
 - qa-reviewer Phase 3 gate — PENDING.
+
+## Customization batch — dark mode, editable categories & accounts, Settings screen (lead)
+
+User-requested batch (all app-layer; the DB already had `archived_at`, `icon`, and full RLS CRUD on `accounts`/`categories` — no migration needed). Done, typecheck + lint clean, **381 tests passing** (369 prior + 12 new), and verified live at both themes:
+
+- **Settings/Account screen** (`src/routes/Settings.tsx`, gear on Home header → `/settings`): Appearance, Accounts, Categories, Account (email + **Sign out** — clears query cache + persisted IndexedDB copy so the next user sees nothing stale).
+- **Dark mode** (`index.css` token remap + `themeStore` + `ThemeToggle`, pre-paint script in `index.html`): Light / System / Dark, persisted; System follows the OS. Verified light+dark render clean.
+- **Editable categories** (`CategoryManager` + `CategoryEditorSheet` + `EmojiPicker`): add custom categories (spend/income), pick an emoji, rename/re-icon, remove (archive+undo).
+- **Editable accounts** (`AccountManager` + `AccountEditorSheet`): add/rename/re-type/re-icon/remove.
+- **Collapsible category picker** (`CategoryPicker`, used in Add + Recategorize): shows 6, expands to all, keeps the selection visible.
+- Data layer: `features/settings/{schemas,mutations}.ts` — zod-validated create/update/archive/restore for both, friendly `23505` handling; `useAccounts`/`useCategories` now exclude archived. Emoji vs seed-slug disambiguation in `iconMaps.tsx` (`looksLikeEmoji`).
+
+**Item 5 ("pasted M-PESA don't show in history") — resolved as not-a-bug.** Live DB inspection showed parsed rows DO persist and DO render (verified an existing sms_parse row under its day group); the user confirmed it's expected — parsed rows carry the SMS's own date, so an older transaction sorts down the list rather than at the top. No code change.
+
+**Env note:** browser automation this session hit intermittent CDP freezes/viewport reflow under machine load (8+ leftover Vite dev servers, since trimmed) — not an app defect; the app rendered clean each time it responded. Still pending a manual pass: the Phase 3 wow-moment walkthrough and the qa-reviewer gate.

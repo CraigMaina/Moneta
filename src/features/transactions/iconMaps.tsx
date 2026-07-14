@@ -33,9 +33,34 @@ const CATEGORY_ICON_MAP: Record<string, (props: IconProps) => ReactElement> = {
   film: EntertainmentIcon,
 }
 
+/** A user-picked emoji rendered as a glyph (custom categories/accounts store an emoji in `icon`). */
+function emojiGlyph(emoji: string): ReactElement {
+  return (
+    <span className="text-[18px] leading-none" role="img" aria-hidden="true">
+      {emoji}
+    </span>
+  )
+}
+
+/**
+ * True for a user-picked emoji, false for a seeded placeholder icon-NAME
+ * (e.g. 'smartphone', 'shopping-basket'). Seeded names are ASCII slugs; emoji
+ * fall outside that set, so this cleanly tells a custom emoji from a slug we'd
+ * otherwise render as literal text.
+ */
+function looksLikeEmoji(icon: string): boolean {
+  return !/^[a-z0-9_-]+$/i.test(icon)
+}
+
 export function categoryIcon(category: Pick<Category, 'icon'>): ReactElement {
-  const Icon = (category.icon && CATEGORY_ICON_MAP[category.icon]) || OtherIcon
-  return <Icon className="h-5 w-5" />
+  const icon = category.icon
+  if (icon) {
+    const Mapped = CATEGORY_ICON_MAP[icon]
+    if (Mapped) return <Mapped className="h-5 w-5" />
+    // A custom category stores a picked emoji (not a seeded placeholder name).
+    if (looksLikeEmoji(icon)) return emojiGlyph(icon)
+  }
+  return <OtherIcon className="h-5 w-5" />
 }
 
 /**
@@ -49,7 +74,10 @@ const ACCOUNT_ICON_MAP: Record<Account['type'], (props: IconProps) => ReactEleme
   other: OtherIcon,
 }
 
-export function accountIcon(account: Pick<Account, 'type'>): ReactElement {
+export function accountIcon(account: Pick<Account, 'type' | 'icon'>): ReactElement {
+  // A user-picked emoji wins over the type default; a seeded placeholder
+  // icon-name ('smartphone', ...) is ignored in favour of the type glyph.
+  if (account.icon && looksLikeEmoji(account.icon)) return emojiGlyph(account.icon)
   const Icon = ACCOUNT_ICON_MAP[account.type] ?? OtherIcon
   return <Icon className="h-5 w-5" />
 }

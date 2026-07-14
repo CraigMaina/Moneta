@@ -5,7 +5,8 @@ import { Keypad } from '../../components/ui/Keypad'
 import { Sheet } from '../../components/ui/Sheet'
 import { useToast } from '../../components/ui/Toast'
 import { cn } from '../../lib/cn'
-import { accountIcon, categoryIcon } from './iconMaps'
+import { accountIcon } from './iconMaps'
+import { CategoryPicker } from './CategoryPicker'
 import { PasteToParseFlow } from './PasteToParseFlow'
 import { useAccounts, useCategories } from './queries'
 import { useAddTransaction } from './mutations'
@@ -353,17 +354,7 @@ function CategorySection({
       ) : categories.length === 0 ? (
         <p className="mt-2 text-[15px] text-ink-600">No categories yet — this entry will be uncategorized.</p>
       ) : (
-        <div className="mt-2 flex gap-2 overflow-x-auto pb-1">
-          {categories.map((category) => (
-            <CategoryChip
-              key={category.id}
-              icon={categoryIcon(category)}
-              label={category.name}
-              selected={selectedId === category.id}
-              onSelect={() => onSelect(category.id)}
-            />
-          ))}
-        </div>
+        <CategoryPicker categories={categories} selectedId={selectedId} onSelect={onSelect} />
       )}
     </div>
   )

@@ -1,5 +1,5 @@
 import { useEffect, useMemo } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { TZDate } from '@date-fns/tz'
 import { format } from 'date-fns'
@@ -8,7 +8,7 @@ import { AmountDisplay, type AmountDisplayTone } from '../components/ui/AmountDi
 import { Button } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
 import { EmptyState } from '../components/ui/EmptyState'
-import { ReceiptIcon } from '../components/ui/icons'
+import { ReceiptIcon, SettingsIcon } from '../components/ui/icons'
 import { SafeToSpendHero } from '../components/ui/SafeToSpendHero'
 import { TabBar } from '../components/ui/TabBar'
 import { AddTransactionSheet } from '../features/transactions/AddTransactionSheet'
@@ -67,7 +67,16 @@ export function Home() {
   return (
     <main className="min-h-dvh bg-paper-0 pb-28">
       <div className="mx-auto max-w-md px-4 pt-[calc(env(safe-area-inset-top)+24px)]">
-        <h1 className="font-display text-[22px] font-semibold text-ink-900">Moneta</h1>
+        <div className="flex items-center justify-between">
+          <h1 className="font-display text-[22px] font-semibold text-ink-900">Moneta</h1>
+          <Link
+            to="/settings"
+            aria-label="Settings"
+            className="flex h-11 w-11 items-center justify-center rounded-full text-ink-600 hover:bg-paper-50 hover:text-ink-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral-600"
+          >
+            <SettingsIcon className="h-6 w-6" />
+          </Link>
+        </div>
 
         <section className="mt-6">
           <HeroSection />

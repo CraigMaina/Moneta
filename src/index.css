@@ -33,6 +33,56 @@
   /* Same warm ink as the card shadow, cast upward — for the bottom tab bar,
      which must lift off scrolling content above it, not below. */
   --shadow-bar: 0 -1px 2px rgb(33 29 30 / 0.04), 0 -8px 24px rgb(33 29 30 / 0.06);
+
+  color-scheme: light;
+}
+
+/*
+ * Dark theme — a warm, low-contrast dark (never pure black; keeps Moneta's
+ * calm personality). The SAME token names are remapped so every component
+ * that reads `--ink-900` / `bg-paper-0` / `text-coral-600` recolors for free.
+ * Applied two ways, deliberately: `@media (prefers-color-scheme: dark)` drives
+ * the "System" setting, while `:root[data-theme="dark"]` is the explicit
+ * toggle. `:root[data-theme="light"]` opts back out of the OS preference.
+ * (Values are duplicated across the two selectors on purpose — CSS has no way
+ * to share a token block, and clarity beats cleverness here.)
+ */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --coral-600: #ff6b6d;
+    --coral-500: #ff8384;
+    --coral-100: #3a2526;
+    --ink-900: #f5f1ed;
+    --ink-600: #a8a2a3;
+    --ink-300: #4a4446;
+    --paper-0: #171415;
+    --paper-50: #211d1e;
+    --leaf-600: #34c07f;
+    --amber-600: #e0a044;
+
+    --shadow-card: 0 1px 2px rgb(0 0 0 / 0.4), 0 8px 24px rgb(0 0 0 / 0.5);
+    --shadow-bar: 0 -1px 2px rgb(0 0 0 / 0.35), 0 -8px 24px rgb(0 0 0 / 0.5);
+
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme='dark'] {
+  --coral-600: #ff6b6d;
+  --coral-500: #ff8384;
+  --coral-100: #3a2526;
+  --ink-900: #f5f1ed;
+  --ink-600: #a8a2a3;
+  --ink-300: #4a4446;
+  --paper-0: #171415;
+  --paper-50: #211d1e;
+  --leaf-600: #34c07f;
+  --amber-600: #e0a044;
+
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.4), 0 8px 24px rgb(0 0 0 / 0.5);
+  --shadow-bar: 0 -1px 2px rgb(0 0 0 / 0.35), 0 -8px 24px rgb(0 0 0 / 0.5);
+
+  color-scheme: dark;
 }
 
 @theme {
@@ -58,10 +108,8 @@
 }
 
 @layer base {
-  html {
-    color-scheme: light;
-  }
-
+  /* color-scheme is driven by the theme tokens on :root (see the dark block
+     above), so a dark theme gets dark form controls/scrollbars for free. */
   body {
     background-color: var(--paper-0);
     color: var(--ink-900);

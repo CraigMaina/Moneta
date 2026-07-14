@@ -1,8 +1,7 @@
 import { Button } from '../../components/ui/Button'
-import { CategoryChip } from '../../components/ui/CategoryChip'
 import { Sheet } from '../../components/ui/Sheet'
 import { useToast } from '../../components/ui/Toast'
-import { categoryIcon } from './iconMaps'
+import { CategoryPicker } from './CategoryPicker'
 import { useUpdateTransaction } from './mutations'
 import { useCategories } from './queries'
 import type { Transaction } from './types'
@@ -72,17 +71,11 @@ export function RecategorizeSheet({ transaction, onClose }: RecategorizeSheetPro
           ) : relevantCategories.length === 0 ? (
             <p className="text-[15px] text-ink-600">No categories yet — nothing to recategorize into.</p>
           ) : (
-            <div className="flex flex-wrap gap-2">
-              {relevantCategories.map((category) => (
-                <CategoryChip
-                  key={category.id}
-                  icon={categoryIcon(category)}
-                  label={category.name}
-                  selected={category.id === transaction.category_id}
-                  onSelect={() => handleSelect(category.id)}
-                />
-              ))}
-            </div>
+            <CategoryPicker
+              categories={relevantCategories}
+              selectedId={transaction.category_id}
+              onSelect={handleSelect}
+            />
           )}
         </div>
       )}

@@ -10,6 +10,16 @@
       content="Moneta — safe-to-spend money manager for Kenya. Paste an M-PESA message, know what you can spend today."
     />
     <title>Moneta</title>
+    <script>
+      // Apply the saved theme before first paint to avoid a light-theme flash.
+      // Mirrors src/features/settings/themeStore.ts (keep the key in sync).
+      (function () {
+        try {
+          var t = localStorage.getItem('moneta-theme')
+          if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t)
+        } catch (e) {}
+      })()
+    </script>
   </head>
   <body>
     <div id="root"></div>
