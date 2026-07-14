@@ -22,6 +22,10 @@ import {
   TransportIcon,
 } from '../components/ui/icons'
 import { formatKES } from '../lib/money'
+import { ParseConfirmationCard, type AccountOption } from '../features/parser/ParseConfirmationCard'
+import { ParseTransform } from '../features/parser/ParseTransform'
+import { PasteToParse, type PasteToParseStatus } from '../features/parser/PasteToParse'
+import type { ParsedMpesaMessage } from '../parser/types'
 
 /**
  * `/kitchen-sink` — the visual QA surface for every design-system primitive,
@@ -54,6 +58,7 @@ export function KitchenSink() {
         <CategoryChipSection />
         <ProgressRingSection />
         <SafeToSpendHeroSection />
+        <ParserSection />
         <TabBarSection onAddPress={() => setSheetOpen(true)} />
       </div>
     </main>
@@ -358,6 +363,182 @@ function TabBarSection({ onAddPress }: { onAddPress: () => void }) {
         </p>
       </div>
       <TabBar onAddPress={onAddPress} />
+    </Section>
+  )
+}
+
+/*
+ * Parse-confirmation gallery (Phase 3, design-engineer). Self-contained demo
+ * data below — deliberately NOT imported from `src/parser/__fixtures__`
+ * (test-only fixtures), so this gallery stays independent of the parser's
+ * own test corpus. Every ParseConfirmationCard/ParseTransform/PasteToParse
+ * prop here is a callback — no data hooks, matching how the lead will
+ * compose them into the real Add sheet.
+ */
+
+const PARSER_DEMO_ACCOUNTS: AccountOption[] = [
+  { id: 'demo-mpesa', name: 'M-PESA', type: 'mpesa' },
+  { id: 'demo-cash', name: 'Cash', type: 'cash' },
+]
+
+const DEMO_EXPENSE_WITH_CATEGORY: ParsedMpesaMessage = {
+  amountCents: 10000,
+  kind: 'expense',
+  feeCents: 0,
+  merchant: null,
+  accountReference: null,
+  mpesaRef: 'AIR1DEMO01',
+  occurredAt: '2026-07-16T15:00:00.000Z',
+  newBalanceCents: 40000,
+  category: 'Airtime & Data',
+  family: 'airtime',
+  counterAccountHint: null,
+  transferDirection: null,
+  reversalOfRef: null,
+  rawText: 'AIR1DEMO01 Confirmed. You bought Ksh100.00 of airtime on 16/7/26 at 6:00 PM. New M-PESA balance is Ksh400.00.',
+  patternId: 'airtime-v1',
+  parserVersion: 'pattern-2026.07',
+}
+
+const DEMO_EXPENSE_NULL_CATEGORY: ParsedMpesaMessage = {
+  amountCents: 150000,
+  kind: 'expense',
+  feeCents: 1500,
+  merchant: 'KENYA POWER AND LIGHTING CO',
+  accountReference: '12345678',
+  mpesaRef: 'PBL1DEMO01',
+  occurredAt: '2026-07-09T07:15:00.000Z',
+  newBalanceCents: 200000,
+  category: null,
+  family: 'paybill',
+  counterAccountHint: null,
+  transferDirection: null,
+  reversalOfRef: null,
+  rawText:
+    'PBL1DEMO01 Confirmed. Ksh1,500.00 paid to KENYA POWER AND LIGHTING CO for account 12345678 on 9/7/26 at 10:15 AM. New M-PESA balance is Ksh2,000.00. Transaction cost, Ksh15.00.',
+  patternId: 'paybill-v1',
+  parserVersion: 'pattern-2026.07',
+}
+
+const DEMO_WITHDRAWAL: ParsedMpesaMessage = {
+  amountCents: 200000,
+  kind: 'transfer',
+  feeCents: 2800,
+  merchant: '123456 - JOHN AGENT SHOP',
+  accountReference: null,
+  mpesaRef: 'WDL1DEMO01',
+  occurredAt: '2026-07-11T08:00:00.000Z',
+  newBalanceCents: 50000,
+  category: null,
+  family: 'withdrawal',
+  counterAccountHint: 'cash',
+  transferDirection: 'mpesa_to_counter',
+  reversalOfRef: null,
+  rawText:
+    'WDL1DEMO01 Confirmed. You have withdrawn Ksh2,000.00 from agent 123456 - JOHN AGENT SHOP on 11/7/26 at 11:00 AM. New M-PESA balance is Ksh500.00. Transaction cost, Ksh28.00.',
+  patternId: 'withdrawal-v1',
+  parserVersion: 'pattern-2026.07',
+}
+
+function ParserSection() {
+  const { showToast } = useToast()
+  const [transformParsed, setTransformParsed] = useState(false)
+  const [pasteStatus, setPasteStatus] = useState<PasteToParseStatus>('idle')
+
+  return (
+    <Section title="Parser: parse-confirmation">
+      <div>
+        <Label>Card — expense, categorized, with a "Sync balance" affordance</Label>
+        <ParseConfirmationCard
+          className="mt-2"
+          parsed={DEMO_EXPENSE_WITH_CATEGORY}
+          accounts={PARSER_DEMO_ACCOUNTS}
+          onConfirm={() => showToast({ title: 'Logged', variant: 'success' })}
+          onEditCategory={() => showToast({ title: 'Opens the category picker', variant: 'info' })}
+          onSyncBalance={() => showToast({ title: 'Balance synced', variant: 'success' })}
+          onCancel={() => showToast({ title: 'Cancelled', variant: 'info' })}
+        />
+      </div>
+
+      <div>
+        <Label>Card — null category shows the "Pick a category" prompt</Label>
+        <ParseConfirmationCard
+          className="mt-2"
+          parsed={DEMO_EXPENSE_NULL_CATEGORY}
+          accounts={PARSER_DEMO_ACCOUNTS}
+          onConfirm={() => {}}
+          onEditCategory={() => showToast({ title: 'Opens the category picker', variant: 'info' })}
+          onCancel={() => {}}
+        />
+      </div>
+
+      <div>
+        <Label>Card — withdrawal: transfer + a separate fee line, never a single expense</Label>
+        <ParseConfirmationCard
+          className="mt-2"
+          parsed={DEMO_WITHDRAWAL}
+          accounts={PARSER_DEMO_ACCOUNTS}
+          onConfirm={() => {}}
+          onEditCategory={() => {}}
+          onCancel={() => {}}
+        />
+      </div>
+
+      <div>
+        <Label>Card — saving (disabled, loading "Log it")</Label>
+        <ParseConfirmationCard
+          className="mt-2"
+          parsed={DEMO_EXPENSE_WITH_CATEGORY}
+          accounts={PARSER_DEMO_ACCOUNTS}
+          onConfirm={() => {}}
+          onEditCategory={() => {}}
+          onCancel={() => {}}
+          saving
+        />
+      </div>
+
+      <div>
+        <Label>ParseTransform — the raw SMS -&gt; card wow moment</Label>
+        <div className="mt-2 rounded-card bg-paper-50 p-3">
+          <ParseTransform rawText={DEMO_EXPENSE_WITH_CATEGORY.rawText} parsed={transformParsed}>
+            <ParseConfirmationCard
+              parsed={DEMO_EXPENSE_WITH_CATEGORY}
+              accounts={PARSER_DEMO_ACCOUNTS}
+              onConfirm={() => {}}
+              onEditCategory={() => {}}
+              onCancel={() => {}}
+            />
+          </ParseTransform>
+        </div>
+        <Button variant="secondary" className="mt-2" onClick={() => setTransformParsed((v) => !v)}>
+          {transformParsed ? 'Show raw message again' : 'Replay the transform'}
+        </Button>
+        <p className="mt-2 text-[12.5px] text-ink-600">
+          Reduced motion (OS setting) swaps stages instantly, with no dissolve/spring.
+        </p>
+      </div>
+
+      <div>
+        <Label>PasteToParse — idle / pending / unparseable fallback</Label>
+        <Card className="mt-2 space-y-3">
+          <div className="flex flex-wrap gap-2">
+            <Button variant="secondary" size="md" onClick={() => setPasteStatus('idle')}>
+              Idle
+            </Button>
+            <Button variant="secondary" size="md" onClick={() => setPasteStatus('pending')}>
+              Pending
+            </Button>
+            <Button variant="secondary" size="md" onClick={() => setPasteStatus('error')}>
+              Unparseable
+            </Button>
+          </div>
+          <PasteToParse
+            status={pasteStatus}
+            onParse={() => setPasteStatus('pending')}
+            onEnterManually={() => showToast({ title: 'Opens manual entry', variant: 'info' })}
+          />
+        </Card>
+      </div>
     </Section>
   )
 }

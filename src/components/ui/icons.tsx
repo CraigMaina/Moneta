@@ -252,3 +252,16 @@ export function TrashIcon({ className }: IconProps) {
     </svg>
   )
 }
+
+/*
+ * Added for the parse-confirmation card (Phase 3): the small connector glyph
+ * for a transfer's "M-PESA -> Cash" headline. See DECISIONS.md.
+ */
+
+export function ArrowRightIcon({ className }: IconProps) {
+  return (
+    <svg {...BASE_PROPS} className={className}>
+      <path d="M4 12h16M13 6l6 6-6 6" />
+    </svg>
+  )
+}
