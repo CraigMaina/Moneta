@@ -6,6 +6,7 @@ import { Sheet } from '../../components/ui/Sheet'
 import { useToast } from '../../components/ui/Toast'
 import { cn } from '../../lib/cn'
 import { accountIcon, categoryIcon } from './iconMaps'
+import { PasteToParseFlow } from './PasteToParseFlow'
 import { useAccounts, useCategories } from './queries'
 import { useAddTransaction } from './mutations'
 import { addTransactionSchema } from './schemas'
@@ -14,7 +15,11 @@ import type { Account, TransactionKind } from './types'
 export interface AddTransactionSheetProps {
   open: boolean
   onClose: () => void
+  /** Pre-filled shared text (Web Share Target): opens straight into paste mode and auto-parses. */
+  initialSharedText?: string
 }
+
+type AddMode = 'manual' | 'paste'
 
 const KIND_OPTIONS: { id: TransactionKind; label: string }[] = [
   { id: 'expense', label: 'Expense' },
@@ -39,11 +44,64 @@ function successCopy(kind: TransactionKind): string {
  * state on open — the idiomatic way to avoid "setState in an effect" for
  * pure derived UI state.
  */
-export function AddTransactionSheet({ open, onClose }: AddTransactionSheetProps) {
+export function AddTransactionSheet({ open, onClose, initialSharedText }: AddTransactionSheetProps) {
   return (
     <Sheet open={open} onClose={onClose} title="Add transaction">
-      {open && <AddTransactionForm onClose={onClose} />}
+      {open && <AddTransactionBody onClose={onClose} initialSharedText={initialSharedText} />}
     </Sheet>
+  )
+}
+
+/**
+ * Manual keypad entry (F4) is the default; a one-tap switch reveals M-PESA
+ * paste-to-parse (F2). A shared-in message (Web Share Target) opens straight
+ * in paste mode. Mode lives here so each fresh `open` starts on manual.
+ */
+function AddTransactionBody({ onClose, initialSharedText }: { onClose: () => void; initialSharedText?: string }) {
+  const [mode, setMode] = useState<AddMode>(initialSharedText ? 'paste' : 'manual')
+
+  return (
+    <div className="space-y-5">
+      <ModeSegmentedControl value={mode} onChange={setMode} />
+      {mode === 'manual' ? (
+        <AddTransactionForm onClose={onClose} />
+      ) : (
+        <PasteToParseFlow
+          onClose={onClose}
+          onFallbackToManual={() => setMode('manual')}
+          initialText={initialSharedText}
+        />
+      )}
+    </div>
+  )
+}
+
+function ModeSegmentedControl({ value, onChange }: { value: AddMode; onChange: (mode: AddMode) => void }) {
+  const options: { id: AddMode; label: string }[] = [
+    { id: 'manual', label: 'Type it' },
+    { id: 'paste', label: 'Paste M-PESA' },
+  ]
+  return (
+    <div role="group" aria-label="Entry mode" className="flex gap-1 rounded-full bg-paper-50 p-1">
+      {options.map((option) => {
+        const selected = value === option.id
+        return (
+          <button
+            key={option.id}
+            type="button"
+            aria-pressed={selected}
+            onClick={() => onChange(option.id)}
+            className={cn(
+              'h-11 flex-1 rounded-full text-[15px] font-semibold transition-colors duration-150 ease-out',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral-600 focus-visible:ring-offset-2 focus-visible:ring-offset-paper-50',
+              selected ? 'bg-paper-0 text-coral-600 shadow-card' : 'text-ink-600',
+            )}
+          >
+            {option.label}
+          </button>
+        )
+      })}
+    </div>
   )
 }
 
