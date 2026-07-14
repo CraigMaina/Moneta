@@ -141,6 +141,104 @@ export function useAddTransaction() {
   })
 }
 
+export interface SaveParsedResult {
+  /** Rows actually written this call (excludes ones deduped away by mpesa_ref). */
+  inserted: Transaction[]
+  /** True when at least one input row was a re-paste of an already-saved message. */
+  duplicated: boolean
+}
+
+/**
+ * Save the 1-or-2 rows a parsed M-PESA message maps to (see
+ * `parsedToTransactions`) as one batch. Dedupe is the whole point (PRD §F2:
+ * "re-pasting the same message must never create a duplicate"): rows whose
+ * `mpesa_ref` already exists for this user are dropped before insert, and the
+ * `mpesa_ref` per-user unique index is the ultimate backstop if two pastes
+ * race. When every row is a duplicate the call is a no-op that reports
+ * `duplicated: true` so the UI can say "Already logged" instead of "Saved".
+ *
+ * Optimistic like the others: all rows are added to the list + balances up
+ * front; the `onSettled` invalidation reconciles away any row the server
+ * deduped (the server's view is the last word), so a re-paste flashes and
+ * settles back to the single existing entry rather than persisting a copy.
+ */
+export function useSaveParsedTransactions() {
+  const queryClient = useQueryClient()
+  const userId = useAuthUserId()
+
+  return useMutation<SaveParsedResult, Error, AddTransactionInput[], MutationContext>({
+    mutationFn: async (inputRows) => {
+      if (!userId) throw new Error('useSaveParsedTransactions: no authenticated user')
+      const rows = inputRows.map((row) => ({ ...addTransactionSchema.parse(row), user_id: userId }))
+
+      const refs = rows.map((row) => row.mpesa_ref).filter((ref): ref is string => Boolean(ref))
+      let existingRefs = new Set<string>()
+      if (refs.length > 0) {
+        const { data: existing, error: readError } = await supabase
+          .from('transactions')
+          .select('mpesa_ref')
+          .eq('user_id', userId)
+          .in('mpesa_ref', refs)
+        if (readError) throw readError
+        existingRefs = new Set(
+          (existing ?? []).map((row) => row.mpesa_ref).filter((ref): ref is string => Boolean(ref)),
+        )
+      }
+
+      const newRows = rows.filter((row) => !row.mpesa_ref || !existingRefs.has(row.mpesa_ref))
+      if (newRows.length === 0) {
+        return { inserted: [], duplicated: true }
+      }
+
+      const { data, error } = await supabase.from('transactions').insert(newRows).select()
+      if (error) throw error
+      return { inserted: data ?? [], duplicated: newRows.length < rows.length }
+    },
+    onMutate: async (inputRows) => {
+      const rows = inputRows.map((row) => addTransactionSchema.parse(row))
+      await cancelTransactionAndBalanceQueries(queryClient, userId)
+
+      const snapshots = snapshotTransactionLists(queryClient, userId)
+      const previousBalances = queryClient.getQueryData<AccountBalance[]>(accountBalanceKeys.all(userId))
+
+      const optimisticRows: Transaction[] = rows.map((parsed) => ({
+        id: optimisticId(),
+        user_id: userId ?? '',
+        created_at: new Date().toISOString(),
+        occurred_at: parsed.occurred_at ?? new Date().toISOString(),
+        source: parsed.source ?? 'sms_parse',
+        account_id: parsed.account_id,
+        counter_account_id: parsed.counter_account_id ?? null,
+        category_id: parsed.category_id ?? null,
+        amount_cents: parsed.amount_cents,
+        kind: parsed.kind,
+        merchant: parsed.merchant ?? null,
+        note: parsed.note ?? null,
+        mpesa_ref: parsed.mpesa_ref ?? null,
+        fee_cents: parsed.fee_cents ?? null,
+        parser_version: parsed.parser_version ?? null,
+        raw_sms: parsed.raw_sms ?? null,
+      }))
+
+      for (const { key, data } of snapshots) {
+        queryClient.setQueryData<Transaction[]>(key, sortByOccurredAtDesc([...optimisticRows, ...(data ?? [])]))
+      }
+
+      let balances = previousBalances
+      if (balances) {
+        for (const row of optimisticRows) {
+          balances = applyBalanceDeltas(balances, transactionBalanceDeltas(row))
+        }
+        queryClient.setQueryData<AccountBalance[]>(accountBalanceKeys.all(userId), balances)
+      }
+
+      return { snapshots, previousBalances }
+    },
+    onError: (_err, _input, context) => rollback(queryClient, userId, context),
+    onSettled: () => invalidateTransactionAndBalanceQueries(queryClient, userId),
+  })
+}
+
 export interface UpdateTransactionArgs {
   id: string
   patch: UpdateTransactionInput

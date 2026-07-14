@@ -17,7 +17,14 @@ const mockSupabase = vi.hoisted(() => ({
 
 vi.mock('../../lib/supabase', () => ({ supabase: mockSupabase }))
 
-import { isOptimisticId, useAddTransaction, useDeleteTransaction, useUpdateTransaction } from './mutations'
+import {
+  isOptimisticId,
+  useAddTransaction,
+  useDeleteTransaction,
+  useSaveParsedTransactions,
+  useUpdateTransaction,
+} from './mutations'
+import type { AddTransactionInput } from './schemas'
 
 function authenticate(): void {
   const session = fakeAuthSession(USER_ID)
@@ -179,6 +186,112 @@ describe('useAddTransaction — optimistic insert, then rollback on error', () =
     const balances = queryClient.getQueryData<AccountBalance[]>(accountBalanceKeys.all(USER_ID))
     expect(balances?.find((b) => b.account_id === MPESA_ID)?.balance_cents).toBe(100000 - 20000)
     expect(balances?.find((b) => b.account_id === CASH_ID)?.balance_cents).toBe(5000 + 20000)
+  })
+})
+
+describe('useSaveParsedTransactions — batch save with mpesa_ref dedupe', () => {
+  // A parsed agent withdrawal maps to two rows: the transfer + a separate fee expense.
+  const withdrawalRows: AddTransactionInput[] = [
+    {
+      kind: 'transfer',
+      amount_cents: 100000,
+      account_id: MPESA_ID,
+      counter_account_id: CASH_ID,
+      mpesa_ref: 'ABC123',
+      source: 'sms_parse',
+      occurred_at: '2026-07-13T09:00:00.000Z',
+      fee_cents: 2800,
+      parser_version: 'pattern-2026.07',
+      raw_sms: 'Confirmed. Withdraw Ksh1,000.00 ...',
+    },
+    {
+      kind: 'expense',
+      amount_cents: 2800,
+      account_id: MPESA_ID,
+      mpesa_ref: 'ABC123-FEE',
+      source: 'sms_parse',
+      occurred_at: '2026-07-13T09:00:00.000Z',
+      note: 'Transaction fee',
+    },
+  ]
+
+  it('optimistically adds BOTH rows and patches balances (transfer + fee), rolling back on error', async () => {
+    const { queryClient, wrapper } = makeClientAndWrapper()
+    queryClient.setQueryData(transactionKeys.list(USER_ID, {}), [])
+    queryClient.setQueryData(accountBalanceKeys.all(USER_ID), balancesSeed)
+
+    // First from() = the dedupe read (no existing refs); second = the insert (parked pending).
+    mockSupabase.from
+      .mockImplementationOnce(() => chainable(ok([]), undefined, 0))
+      .mockImplementationOnce(() => chainable(fail('pending'), undefined, 20))
+
+    const { result } = renderHook(() => useSaveParsedTransactions(), { wrapper })
+    await waitForAuthReady()
+
+    await act(async () => {
+      result.current.mutate(withdrawalRows)
+      await Promise.resolve()
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+
+    const optimisticList = queryClient.getQueryData<Transaction[]>(transactionKeys.list(USER_ID, {}))
+    expect(optimisticList).toHaveLength(2)
+    expect(optimisticList?.every((t) => isOptimisticId(t.id))).toBe(true)
+
+    const balances = queryClient.getQueryData<AccountBalance[]>(accountBalanceKeys.all(USER_ID))
+    // M-PESA: 100000 − 100000 transfer-out − 2800 fee = −2800. Cash: 5000 + 100000 = 105000.
+    expect(balances?.find((b) => b.account_id === MPESA_ID)?.balance_cents).toBe(-2800)
+    expect(balances?.find((b) => b.account_id === CASH_ID)?.balance_cents).toBe(105000)
+
+    await waitFor(() => expect(result.current.isError).toBe(true))
+    expect(queryClient.getQueryData<Transaction[]>(transactionKeys.list(USER_ID, {}))).toEqual([])
+    expect(queryClient.getQueryData<AccountBalance[]>(accountBalanceKeys.all(USER_ID))).toEqual(balancesSeed)
+  })
+
+  it('a full re-paste is a no-op: every ref already exists → duplicated, no insert call', async () => {
+    const { wrapper } = makeClientAndWrapper()
+    // The dedupe read reports both refs already saved.
+    mockSupabase.from.mockImplementationOnce(() =>
+      chainable(ok([{ mpesa_ref: 'ABC123' }, { mpesa_ref: 'ABC123-FEE' }]), undefined, 0),
+    )
+
+    const { result } = renderHook(() => useSaveParsedTransactions(), { wrapper })
+    await waitForAuthReady()
+
+    await act(async () => {
+      result.current.mutate(withdrawalRows)
+    })
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+
+    expect(result.current.data).toEqual({ inserted: [], duplicated: true })
+    // Only the read happened — no insert was ever attempted.
+    expect(mockSupabase.from).toHaveBeenCalledTimes(1)
+  })
+
+  it('injects user_id into every row and inserts only the not-yet-seen ones', async () => {
+    const { wrapper } = makeClientAndWrapper()
+    const calls: RecordedCall[] = []
+    const record = (call: RecordedCall) => calls.push(call)
+    // The transfer ref already exists; only the fee row is new.
+    mockSupabase.from
+      .mockImplementationOnce(() => chainable(ok([{ mpesa_ref: 'ABC123' }]), record))
+      .mockImplementationOnce(() => chainable(ok([{ ...existingExpense, id: 'server-fee' }]), record))
+
+    const { result } = renderHook(() => useSaveParsedTransactions(), { wrapper })
+    await waitForAuthReady()
+
+    await act(async () => {
+      result.current.mutate(withdrawalRows)
+    })
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+
+    expect(result.current.data?.duplicated).toBe(true)
+    const insertCall = calls.find((c) => c.method === 'insert')
+    const payload = insertCall?.args[0] as Array<{ user_id: string; mpesa_ref: string }>
+    expect(payload).toHaveLength(1) // only the fee row (ABC123-FEE) was new
+    expect(payload[0]!.mpesa_ref).toBe('ABC123-FEE')
+    expect(payload[0]!.user_id).toBe(USER_ID)
   })
 })
 
