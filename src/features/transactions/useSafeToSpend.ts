@@ -69,8 +69,25 @@ export function useSafeToSpend(options: UseSafeToSpendOptions = {}): UseSafeToSp
 
   const { periodStart, periodEnd } = useMemo(() => currentPeriod(now, cycleAnchorDay), [now, cycleAnchorDay])
 
-  const transactionsQuery = useTransactions({ from: periodStart, to: now })
+  // Fetch the whole period (to periodEnd), NOT `to: now`. A frozen mount-time
+  // `now` upper bound would make the refetch after a mutation drop any
+  // transaction whose occurred_at is later than mount — so a just-logged
+  // expense wouldn't reflect until a page refresh. periodEnd is stable within
+  // the period, so the query key doesn't thrash.
+  const transactionsQuery = useTransactions({ from: periodStart, to: periodEnd })
   const recurringQuery = useUpcomingRecurringBills({ from: now, to: periodEnd })
+
+  // The instant we evaluate spend at. calcSafeToSpend excludes occurredAt > now
+  // (genuinely future-dated rows), so a frozen mount-time `now` would treat a
+  // just-logged transaction (occurred_at ≈ real now, i.e. after mount) as
+  // "future" and leave it out of the hero. Refresh this whenever the
+  // transaction cache changes (optimistic patch or refetch) so a new row counts
+  // immediately — the query keys above stay stable regardless.
+  const evaluationNow = useMemo(
+    () => options.now ?? new Date(),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [options.now, transactionsQuery.dataUpdatedAt],
+  )
 
   const isLoading = profileQuery.isLoading || transactionsQuery.isLoading || recurringQuery.isLoading
   const isError = profileQuery.isError || transactionsQuery.isError || recurringQuery.isError
@@ -90,7 +107,7 @@ export function useSafeToSpend(options: UseSafeToSpendOptions = {}): UseSafeToSp
     const upcomingFixedBillsCents = recurringQuery.data.reduce((sum, item) => sum + item.amount_cents, 0)
 
     const result = calcSafeToSpend({
-      now,
+      now: evaluationNow,
       cycleAnchorDay,
       expectedIncomeCents,
       transactions: calcTxns,
@@ -99,7 +116,7 @@ export function useSafeToSpend(options: UseSafeToSpendOptions = {}): UseSafeToSp
     })
 
     // Today's spend (Nairobi day), transfers excluded — for the hero arc.
-    const todayStr = toNairobiDateString(now)
+    const todayStr = toNairobiDateString(evaluationNow)
     let spentTodayCents = 0
     for (const t of calcTxns) {
       if (t.kind === 'expense' && toNairobiDateString(t.occurredAt) === todayStr) {
@@ -109,7 +126,7 @@ export function useSafeToSpend(options: UseSafeToSpendOptions = {}): UseSafeToSp
     const dailyBudgetCents = Math.max(0, result.safeToSpendCents) + spentTodayCents
 
     return { ...result, spentTodayCents, dailyBudgetCents }
-  }, [ready, transactionsQuery.data, recurringQuery.data, now, cycleAnchorDay, expectedIncomeCents, plannedGoalContributionsCents])
+  }, [ready, transactionsQuery.data, recurringQuery.data, evaluationNow, cycleAnchorDay, expectedIncomeCents, plannedGoalContributionsCents])
 
   return { data, isLoading, isError, error }
 }
