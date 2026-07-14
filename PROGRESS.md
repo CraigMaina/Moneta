@@ -132,3 +132,10 @@ _Read this first at the start of every session. Append at the end of every sessi
 **Live E2E note (per brief):** confirmed — there is still no sign-in UI. Every hook here reads `supabase.auth` and stays `enabled: false`/errors cleanly with no session; a minimal/dev auth wiring is needed before these hooks do anything against the live cloud project, exactly as the brief anticipated. All tests here mock `supabase` entirely (`src/test/supabaseTestHelpers.ts`) and need no network/session.
 
 **Not committed** — left for the lead to review the money-path seam and commit, per brief instructions.
+
+## Phase 2 — money-path seam committed + reactivity fix (lead)
+
+- Reviewed the `useSafeToSpend` seam and committed the Phase 2 data-layer slice.
+- **Fixed a user-reported bug:** the safe-to-spend hero didn't recompute after logging a transaction (balances updated, but the number needed a page refresh). Root cause: the hook froze `now` at mount, so a just-logged row (occurred_at after mount) was excluded twice — by `calcSafeToSpend`'s future-row filter and by the period query's `to: now` upper bound on refetch. Fix: fetch `to: periodEnd` and evaluate spend at an `evaluationNow` that refreshes on `transactionsQuery.dataUpdatedAt`. Commit `56a6690`.
+- **Verified live** in the browser (logged-in session): logging a KES 666 expense moved the hero (2,797.38 → 5,538.16) and posted the expense row + M-PESA −666 with no refresh. `npm run check` green (201 tests / 28 files).
+- Remaining Phase 2 gates: broader live manual E2E + 390×844 visual QA of populated screens (deferred; not blocking Phase 3 parser work, which is pure logic).
