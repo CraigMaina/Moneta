@@ -236,3 +236,17 @@ SUPABASE_DB_URL=… node supabase/tests/run-pgtap.mjs supabase/tests/database/pa
 **Verification status:**
 - Live wow-moment walkthrough (paste → transform → confirm → save at 390×844) NOT yet done — browser automation hit repeated input-dispatch timeouts this session (app renders clean, zero console errors; not an app defect). Needs a manual pass.
 - qa-reviewer Phase 3 gate: PENDING (run after the deferred items land, or scope the gate to what's committed).
+
+## Phase 3 — deferred items closed (lead)
+
+All three deferrals from the parser phase are now implemented, tested, and committed:
+- **Reversal auto-matching** (`e55f788`) — `useReverseTransaction` finds `{ref, ref-FEE}` and deletes them so the original nets to zero; `found:false` routes to manual when the original isn't held. Wired into the paste flow.
+- **Balance reconciliation** (`489ff82`) — `useReconcileBalance` books one income/expense adjustment for the gap between the live balance and Safaricom's reported figure; wired to the card's "Sync balance" (arm → reconcile after save). **Also fixed a suite-wide load flake** (userEvent/timer tests timing out under parallel CPU contention): `delay:null` on the Add-sheet flow + global `testTimeout: 20000`; verified green across 8 consecutive full runs.
+- **Web Share Target** (`9761f3c`) — switched to a **GET** share target (action `/`); Home reads the shared SMS and opens paste-parse, no custom SW. Pure `extractSharedText` unit-tested.
+
+**Provider:** the LLM fallback is Google **Gemini** (free), deployed by the user (key set, function live — smoke-tested 401 at the gateway).
+
+**Phase 3 remaining (process/verification, not code):**
+- Live wow-moment walkthrough at 390×844 (paste → transform → confirm → save) — still pending a manual pass (browser-automation input timeouts earlier; app renders clean).
+- Device verification of the GET share target (share from Android Messages → confirmation card ≤3s) — needs a physical install.
+- qa-reviewer Phase 3 gate — PENDING.
