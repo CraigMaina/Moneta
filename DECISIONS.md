@@ -74,6 +74,11 @@ Each entry: date · decision · rationale · scope/impact.
 
 - **`vi.hoisted(() => ({ auth: {...}, from: vi.fn() }))` is duplicated (not shared) across `queries.test.tsx`/`mutations.test.tsx`/`useSafeToSpend.test.tsx`/`useAuthUserId.test.tsx`**, rather than importing one shared hoisted mock object. `vi.hoisted`'s callback runs before other imports are evaluated within that file, so an imported factory function can't reliably be called from inside it without risking a "used before initialization" hazard across files/bundlers — the few-line duplication is the safer, standard-idiom trade-off here (Vitest's own docs recommend inlining the hoisted factory).
 
+## 2026-07-14 — Phase 2 coverage measurement (lead)
+
+- **Dependency added: `@vitest/coverage-v8` (dev).** Needed to produce the formal branch-coverage number the Phase 2 exit criterion requires for the safe-to-spend module. Added `test:coverage` script (`vitest run --coverage`).
+- **`src/lib/safeToSpend.ts`: 100% statements / 100% functions / 100% lines / 96.55% branch (28/29)** — exceeds the ≥95% exit bar. The single uncovered branch is the `Math.max(1, …)` guard on `daysRemaining`: `currentPeriod` always returns `periodEnd ≥ today`, so `differenceInCalendarDays(...) + 1 ≥ 1` and the `1` fallback is structurally unreachable. Left uncovered deliberately (a defensive floor) rather than contriving an impossible input just to paint the line green.
+
 ## 2026-07-13 — Phase 2 start: safe-to-spend calculator semantics (lead)
 
 `src/lib/safeToSpend.ts` — the pure, exhaustively-tested hero calculator (19 tests; the master prompt reserves the money path for the lead). Two semantic decisions the PRD formula left implicit:
