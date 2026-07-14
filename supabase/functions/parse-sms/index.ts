@@ -5,15 +5,16 @@
 // point 2). Called by the client only on a parser MISS.
 //
 // Flow: verify the caller's Supabase JWT (never trust a user_id in the
-// body) -> call the Anthropic API to extract the same ParsedMpesaMessage
-// contract as the deterministic parser (mirrored in ./schema.ts) -> validate
-// the model's output strictly with zod, including the cross-field
-// invariants -> log the attempt to `parse_misses` (deduped per-user by a
-// hash of the raw SMS) -> return either a fully-validated match or a
-// manual-entry signal. Never returns unvalidated model output.
+// body) -> call the Google Gemini API (free tier) with structured-JSON
+// output to extract the same ParsedMpesaMessage contract as the
+// deterministic parser (mirrored in ./schema.ts) -> validate the model's
+// output strictly with zod, including the cross-field invariants -> log the
+// attempt to `parse_misses` (deduped per-user by a hash of the raw SMS) ->
+// return either a fully-validated match or a manual-entry signal. Never
+// returns unvalidated model output.
 //
 // Deploy:   supabase functions deploy parse-sms
-// Secret:   supabase secrets set ANTHROPIC_API_KEY=sk-ant-...
+// Secret:   supabase secrets set GEMINI_API_KEY=...   (free from https://aistudio.google.com/apikey)
 //
 // Request:  POST { text: string }  (Authorization: Bearer <user JWT>)
 // Response: 200 { status: 'matched', data: ParsedMpesaMessage }
@@ -22,8 +23,8 @@
 
 import { createClient } from '@supabase/supabase-js'
 import { z } from 'zod'
-import { interpretToolUse, type AnthropicToolUse, type ParseSmsOutcome } from './schema.ts'
-import { ANTHROPIC_MODEL, ANTHROPIC_TOOLS, SYSTEM_PROMPT } from './prompt.ts'
+import { interpretModelJson, type ParseSmsOutcome } from './schema.ts'
+import { GEMINI_MODEL, GEMINI_RESPONSE_SCHEMA, SYSTEM_PROMPT } from './prompt.ts'
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -59,37 +60,40 @@ async function hashSmsText(normalized: string): Promise<string> {
     .join('')
 }
 
-type AnthropicMessageResponse = {
-  content?: Array<{ type: string; name?: string; input?: unknown }>
+type GeminiGenerateResponse = {
+  candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>
 }
 
-/** Calls the Anthropic Messages API and returns the forced tool call (or null if the model unexpectedly returned none). */
-async function callAnthropic(apiKey: string, rawSms: string): Promise<AnthropicToolUse | null> {
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-      'content-type': 'application/json',
+/** Calls the Google Gemini API with structured-JSON output and returns the model's JSON text (or null). */
+async function callGemini(apiKey: string, rawSms: string): Promise<string | null> {
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`,
+    {
+      method: 'POST',
+      headers: {
+        // Key in a header, never the URL query string (avoids leaking the secret into logs/URLs).
+        'x-goog-api-key': apiKey,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
+        contents: [{ role: 'user', parts: [{ text: rawSms }] }],
+        generationConfig: {
+          responseMimeType: 'application/json',
+          responseSchema: GEMINI_RESPONSE_SCHEMA,
+          temperature: 0,
+        },
+      }),
     },
-    body: JSON.stringify({
-      model: ANTHROPIC_MODEL,
-      max_tokens: 1024,
-      system: SYSTEM_PROMPT,
-      messages: [{ role: 'user', content: rawSms }],
-      tools: ANTHROPIC_TOOLS,
-      tool_choice: { type: 'any' },
-    }),
-  })
+  )
 
   if (!res.ok) {
-    throw new Error(`Anthropic API responded ${res.status}`)
+    throw new Error(`Gemini API responded ${res.status}`)
   }
 
-  const data = (await res.json()) as AnthropicMessageResponse
-  const toolUse = data.content?.find((block) => block.type === 'tool_use')
-  if (!toolUse || typeof toolUse.name !== 'string') return null
-  return { name: toolUse.name, input: toolUse.input }
+  const data = (await res.json()) as GeminiGenerateResponse
+  const text = data.candidates?.[0]?.content?.parts?.[0]?.text
+  return typeof text === 'string' ? text : null
 }
 
 Deno.serve(async (req: Request) => {
@@ -147,21 +151,21 @@ Deno.serve(async (req: Request) => {
   const rawSmsHash = await hashSmsText(normalized)
 
   // ---- LLM call + strict validation ----
-  const apiKey = Deno.env.get('ANTHROPIC_API_KEY')
+  const apiKey = Deno.env.get('GEMINI_API_KEY')
   if (!apiKey) {
     return errorResponse(500, 'server_error', 'parse-sms is not configured.')
   }
 
   let outcome: ParseSmsOutcome
   try {
-    const toolUse = await callAnthropic(apiKey, normalized)
-    outcome = interpretToolUse(toolUse, normalized)
+    const jsonText = await callGemini(apiKey, normalized)
+    outcome = interpretModelJson(jsonText, normalized)
   } catch (err) {
-    // Anthropic call failed (network/rate-limit/malformed response/etc) —
-    // fail closed to manual entry, same contract as a validation failure,
-    // rather than surface an error the client has no useful way to act on.
-    // Never leak the underlying error/stack to the client.
-    console.error('parse-sms: Anthropic call failed', err instanceof Error ? err.message : err)
+    // Gemini call failed (network/rate-limit/malformed response/etc) — fail
+    // closed to manual entry, same contract as a validation failure, rather
+    // than surface an error the client has no useful way to act on. Never
+    // leak the underlying error/stack to the client.
+    console.error('parse-sms: Gemini call failed', err instanceof Error ? err.message : err)
     outcome = { status: 'manual', raw: normalized }
   }
 

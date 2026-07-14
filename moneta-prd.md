@@ -100,7 +100,7 @@ User pastes an M-PESA SMS into the Add sheet (or shares it via the OS share shee
 Parsing strategy:
 
 1. **Deterministic pattern table** (runs on-device, works offline) covering the known format families: money received; sent to person; PayBill payment (with account number); Buy Goods/Till payment; Pochi la Biashara; agent withdrawal; agent deposit; airtime purchase; Fuliza drawdown and repayment; M-Shwari/KCB M-PESA transfers; reversal messages.
-2. **LLM fallback** (Supabase Edge Function → Anthropic API) for messages that match no pattern, returning strict JSON. Fallback results are flagged `parser_version: 'llm'` and the raw message is stored (hashed dedupe) so new deterministic patterns can be authored from real misses.
+2. **LLM fallback** (Supabase Edge Function → a free LLM API; Google Gemini) for messages that match no pattern, returning strict JSON. Fallback results are flagged `parser_version: 'llm'` and the raw message is stored (hashed dedupe) so new deterministic patterns can be authored from real misses.
 3. **Dedupe:** the M-PESA ref code is unique per transaction; re-pasting the same message must never create a duplicate.
 4. Balance cross-check: when the SMS includes "New M-PESA balance," offer a one-tap "sync account balance" reconciliation if it differs from Moneta's computed balance.
 

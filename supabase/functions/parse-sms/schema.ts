@@ -227,43 +227,51 @@ export const LLM_PARSER_VERSION = 'llm'
 /** parsedMpesaMessageSchema.patternId has no real patterns.json entry for LLM output — this sentinel fills that slot. */
 export const LLM_PATTERN_ID = 'llm-fallback'
 
-export const EXTRACT_TOOL_NAME = 'extract_mpesa_transaction'
-export const NOT_MPESA_TOOL_NAME = 'not_mpesa_message'
-
-/** A tool_use content block from the Anthropic Messages API — the minimal shape this module needs. */
-export type AnthropicToolUse = { name: string; input: unknown }
+/**
+ * The Gemini structured-output envelope. The model returns JSON matching
+ * `GEMINI_RESPONSE_SCHEMA` (see prompt.ts): a `parseable` discriminator plus a
+ * nullable `transaction`. `parseable: false` (or a null transaction) means the
+ * message isn't an M-PESA notification — route to manual entry, never guess.
+ */
+export const modelResponseSchema = z.object({
+  parseable: z.boolean(),
+  transaction: llmExtractionSchema.nullable(),
+})
 
 export type ParseSmsOutcome =
   { status: 'matched'; data: ParsedMpesaMessage } | { status: 'manual'; raw: string }
 
 /**
- * Pure mapping/validation core: turns the model's tool call into either a
+ * Pure mapping/validation core: turns the model's raw JSON text into either a
  * fully-validated `ParsedMpesaMessage` or a manual-entry fallback. NEVER
  * returns unvalidated model output (CLAUDE.md Parser rules: "on validation
  * failure, surface manual-entry prefill, never a guess"). No Deno, network,
- * or DB access — this is exactly what the unit tests exercise directly,
- * with the Anthropic call itself mocked out at the `toolUse` boundary.
+ * or DB access — this is exactly what the unit tests exercise directly, with
+ * the Gemini call itself mocked out at the JSON-text boundary.
+ *
+ * Provider-agnostic: `jsonText` is whatever structured-JSON string the model
+ * produced (Gemini's `candidates[0].content.parts[0].text`). Any failure —
+ * unparseable JSON, wrong envelope shape, `parseable: false`, a null
+ * transaction, a field-level or cross-field invariant violation — folds to
+ * the same `manual` outcome.
  */
-export function interpretToolUse(
-  toolUse: AnthropicToolUse | null,
-  rawSms: string,
-): ParseSmsOutcome {
-  if (toolUse === null || toolUse.name === NOT_MPESA_TOOL_NAME) {
-    return { status: 'manual', raw: rawSms }
-  }
-  if (toolUse.name !== EXTRACT_TOOL_NAME) {
-    // Unrecognized tool name — defensive; should never happen since only
-    // these two tools are offered to the model.
+export function interpretModelJson(jsonText: string | null, rawSms: string): ParseSmsOutcome {
+  if (!jsonText) return { status: 'manual', raw: rawSms }
+
+  let raw: unknown
+  try {
+    raw = JSON.parse(jsonText)
+  } catch {
     return { status: 'manual', raw: rawSms }
   }
 
-  const extracted = llmExtractionSchema.safeParse(toolUse.input)
-  if (!extracted.success) {
+  const envelope = modelResponseSchema.safeParse(raw)
+  if (!envelope.success || !envelope.data.parseable || envelope.data.transaction === null) {
     return { status: 'manual', raw: rawSms }
   }
 
   const candidate = {
-    ...extracted.data,
+    ...envelope.data.transaction,
     rawText: rawSms,
     patternId: LLM_PATTERN_ID,
     parserVersion: LLM_PARSER_VERSION,
