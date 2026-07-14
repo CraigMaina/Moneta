@@ -49,8 +49,8 @@
  */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
-    --coral-600: #ff6b6d;
-    --coral-500: #ff8384;
+    --coral-600: #ec4e52;
+    --coral-500: #f2686b;
     --coral-100: #3a2526;
     --ink-900: #f5f1ed;
     --ink-600: #a8a2a3;
@@ -68,8 +68,8 @@
 }
 
 :root[data-theme='dark'] {
-  --coral-600: #ff6b6d;
-  --coral-500: #ff8384;
+  --coral-600: #ec4e52;
+  --coral-500: #f2686b;
   --coral-100: #3a2526;
   --ink-900: #f5f1ed;
   --ink-600: #a8a2a3;

@@ -7,6 +7,23 @@ import { cn } from '../../lib/cn'
  * by design — the stored `icon` is rendered as-is by `iconMaps.tsx`.
  */
 
+/**
+ * The first grapheme cluster of `input`, or null if empty. Grapheme-aware
+ * (Intl.Segmenter) so a ZWJ emoji — a family 👨‍👩‍👧 or a skin-toned/keycap
+ * glyph — is kept whole instead of being chopped mid-sequence by a code-point
+ * split. Falls back to a code-point take where Segmenter is unavailable.
+ */
+function firstEmoji(input: string): string | null {
+  const trimmed = input.trim()
+  if (!trimmed) return null
+  if (typeof Intl !== 'undefined' && 'Segmenter' in Intl) {
+    const segmenter = new Intl.Segmenter(undefined, { granularity: 'grapheme' })
+    const first = segmenter.segment(trimmed)[Symbol.iterator]().next().value
+    return first ? first.segment : null
+  }
+  return Array.from(trimmed)[0] ?? null
+}
+
 const SUGGESTED_EMOJI = [
   '🛒', '🍔', '🚗', '🏠', '📱', '🛍️', '🎬', '💊',
   '📚', '👨‍👩‍👧', '💡', '⛽', '☕', '🍺', '✈️', '🎁',
@@ -49,10 +66,7 @@ export function EmojiPicker({ value, onChange, className }: EmojiPickerProps) {
           type="text"
           inputMode="text"
           value={value ?? ''}
-          onChange={(event) => {
-            const next = event.target.value.trim()
-            onChange(next ? Array.from(next).slice(0, 2).join('') : null)
-          }}
+          onChange={(event) => onChange(firstEmoji(event.target.value))}
           placeholder="Or type any emoji"
           aria-label="Custom emoji"
           className="h-11 w-full rounded-card bg-paper-0 px-4 text-[15px] text-ink-900 placeholder:text-ink-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral-600"

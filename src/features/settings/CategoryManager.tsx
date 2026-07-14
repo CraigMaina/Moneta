@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
 import { PencilIcon, PlusIcon, TrashIcon } from '../../components/ui/icons'
 import { useToast } from '../../components/ui/Toast'
@@ -7,6 +8,7 @@ import { useCategories } from '../transactions/queries'
 import type { Category } from '../transactions/types'
 import type { Database } from '../../lib/database.types'
 import { CategoryEditorSheet } from './CategoryEditorSheet'
+import { ManagerSkeleton } from './ManagerSkeleton'
 import { useArchiveCategory, useRestoreCategory } from './mutations'
 
 type CategoryKind = Database['public']['Enums']['category_kind']
@@ -65,22 +67,35 @@ export function CategoryManager() {
 
   return (
     <>
-      <div className="space-y-5">
-        <CategorySection
-          heading="Spending"
-          categories={expense}
-          onAdd={() => openCreate('expense')}
-          onEdit={openEdit}
-          onRemove={handleRemove}
-        />
-        <CategorySection
-          heading="Income"
-          categories={income}
-          onAdd={() => openCreate('income')}
-          onEdit={openEdit}
-          onRemove={handleRemove}
-        />
-      </div>
+      {categoriesQuery.isPending ? (
+        <Card className="p-0">
+          <ManagerSkeleton />
+        </Card>
+      ) : categoriesQuery.isError ? (
+        <Card className="flex items-center justify-between gap-3">
+          <p className="text-[15px] text-ink-600">Couldn&apos;t load your categories.</p>
+          <Button variant="secondary" onClick={() => void categoriesQuery.refetch()}>
+            Retry
+          </Button>
+        </Card>
+      ) : (
+        <div className="space-y-5">
+          <CategorySection
+            heading="Spending"
+            categories={expense}
+            onAdd={() => openCreate('expense')}
+            onEdit={openEdit}
+            onRemove={handleRemove}
+          />
+          <CategorySection
+            heading="Income"
+            categories={income}
+            onAdd={() => openCreate('income')}
+            onEdit={openEdit}
+            onRemove={handleRemove}
+          />
+        </div>
+      )}
 
       <CategoryEditorSheet
         open={editorOpen}
@@ -121,7 +136,7 @@ function CategorySection({
                   type="button"
                   aria-label={`Edit ${category.name}`}
                   onClick={() => onEdit(category)}
-                  className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full text-ink-600 hover:bg-paper-50 hover:text-ink-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral-600"
+                  className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full text-ink-600 hover:bg-paper-50 hover:text-ink-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral-600"
                 >
                   <PencilIcon className="h-5 w-5" />
                 </button>
@@ -129,7 +144,7 @@ function CategorySection({
                   type="button"
                   aria-label={`Remove ${category.name}`}
                   onClick={() => onRemove(category)}
-                  className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full text-ink-600 hover:bg-paper-50 hover:text-ink-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral-600"
+                  className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full text-ink-600 hover:bg-paper-50 hover:text-ink-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral-600"
                 >
                   <TrashIcon className="h-5 w-5" />
                 </button>

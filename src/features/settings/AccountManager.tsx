@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
 import { PencilIcon, PlusIcon, TrashIcon } from '../../components/ui/icons'
 import { useToast } from '../../components/ui/Toast'
@@ -7,6 +8,7 @@ import { useAccounts } from '../transactions/queries'
 import type { Account } from '../transactions/types'
 import { AccountEditorSheet } from './AccountEditorSheet'
 import { accountTypeLabel } from './accountTypeMeta'
+import { ManagerSkeleton } from './ManagerSkeleton'
 import { useArchiveAccount, useRestoreAccount } from './mutations'
 
 /**
@@ -55,7 +57,16 @@ export function AccountManager() {
   return (
     <>
       <Card className="p-0">
-        {accounts.length === 0 ? (
+        {accountsQuery.isPending ? (
+          <ManagerSkeleton />
+        ) : accountsQuery.isError ? (
+          <div className="flex items-center justify-between gap-3 px-4 py-4">
+            <p className="text-[15px] text-ink-600">Couldn&apos;t load your accounts.</p>
+            <Button variant="secondary" onClick={() => void accountsQuery.refetch()}>
+              Retry
+            </Button>
+          </div>
+        ) : accounts.length === 0 ? (
           <p className="px-4 py-5 text-[15px] text-ink-600">No accounts yet. Add one to track where your money sits.</p>
         ) : (
           <ul className="divide-y divide-ink-300/40">
@@ -99,7 +110,7 @@ function RowButton({ label, onClick, children }: { label: string; onClick: () =>
       type="button"
       aria-label={label}
       onClick={onClick}
-      className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full text-ink-600 hover:bg-paper-50 hover:text-ink-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral-600"
+      className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full text-ink-600 hover:bg-paper-50 hover:text-ink-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral-600"
     >
       {children}
     </button>

@@ -16,8 +16,11 @@ import { z } from 'zod'
 const trimmedName = z.string().trim().min(1, 'Give it a name').max(40, 'Keep the name short')
 // A user-picked emoji. We don't hard-validate "is exactly one emoji" (grapheme
 // counting is fiddly across platforms); we just cap length so a pasted string
-// can't bloat the row. `null` clears it back to the name-based default glyph.
-const emojiIcon = z.string().trim().min(1).max(8).nullable().optional()
+// can't bloat the row. The cap is 24 UTF-16 units, not a small number, because
+// a single ZWJ emoji (e.g. a 4-member family, with skin tones) can be ~11–25
+// code units — the picker already narrows free input to the first grapheme, so
+// this only guards against paste bloat. `null` clears it to the default glyph.
+const emojiIcon = z.string().trim().min(1).max(24).nullable().optional()
 
 export const categoryKindSchema = z.enum(['income', 'expense'])
 export const accountTypeSchema = z.enum(['mpesa', 'cash', 'bank', 'other'])
