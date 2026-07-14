@@ -21,6 +21,7 @@ import {
   isOptimisticId,
   useAddTransaction,
   useDeleteTransaction,
+  useReverseTransaction,
   useSaveParsedTransactions,
   useUpdateTransaction,
 } from './mutations'
@@ -292,6 +293,97 @@ describe('useSaveParsedTransactions — batch save with mpesa_ref dedupe', () =>
     expect(payload).toHaveLength(1) // only the fee row (ABC123-FEE) was new
     expect(payload[0]!.mpesa_ref).toBe('ABC123-FEE')
     expect(payload[0]!.user_id).toBe(USER_ID)
+  })
+})
+
+describe('useReverseTransaction — cancels the original (+ fee sibling) out', () => {
+  const original: Transaction = {
+    ...existingExpense,
+    id: 'orig-1',
+    amount_cents: 100000,
+    kind: 'transfer',
+    account_id: MPESA_ID,
+    counter_account_id: CASH_ID,
+    mpesa_ref: 'REF123',
+  }
+  const feeSibling: Transaction = {
+    ...existingExpense,
+    id: 'fee-1',
+    amount_cents: 2800,
+    kind: 'expense',
+    account_id: MPESA_ID,
+    counter_account_id: null,
+    mpesa_ref: 'REF123-FEE',
+  }
+
+  it('optimistically removes both rows and reverses their balance effect', async () => {
+    const { queryClient, wrapper } = makeClientAndWrapper()
+    queryClient.setQueryData(transactionKeys.list(USER_ID, {}), [original, feeSibling, existingExpense])
+    queryClient.setQueryData(accountBalanceKeys.all(USER_ID), balancesSeed)
+    // Delay so we can observe the optimistic state before the delete settles.
+    mockSupabase.from.mockImplementation(() => chainable(fail('pending'), undefined, 20))
+
+    const { result } = renderHook(() => useReverseTransaction(), { wrapper })
+    await waitForAuthReady()
+
+    await act(async () => {
+      result.current.mutate('REF123')
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+
+    // Both REF123 rows gone; the unrelated expense stays.
+    const list = queryClient.getQueryData<Transaction[]>(transactionKeys.list(USER_ID, {}))
+    expect(list).toEqual([existingExpense])
+
+    // Reversing the transfer returns +100000 to M-PESA and −100000 from Cash;
+    // reversing the fee returns +2800 to M-PESA. Net M-PESA: 100000 + 100000 + 2800.
+    const balances = queryClient.getQueryData<AccountBalance[]>(accountBalanceKeys.all(USER_ID))
+    expect(balances?.find((b) => b.account_id === MPESA_ID)?.balance_cents).toBe(100000 + 100000 + 2800)
+    expect(balances?.find((b) => b.account_id === CASH_ID)?.balance_cents).toBe(5000 - 100000)
+
+    await waitFor(() => expect(result.current.isError).toBe(true))
+    expect(queryClient.getQueryData<Transaction[]>(transactionKeys.list(USER_ID, {}))).toEqual([
+      original,
+      feeSibling,
+      existingExpense,
+    ])
+  })
+
+  it('reports found:false when the original is not in the DB', async () => {
+    const { wrapper } = makeClientAndWrapper()
+    // The dedupe read returns no rows -> no delete attempted.
+    mockSupabase.from.mockImplementationOnce(() => chainable(ok([])))
+
+    const { result } = renderHook(() => useReverseTransaction(), { wrapper })
+    await waitForAuthReady()
+
+    await act(async () => {
+      result.current.mutate('MISSING999')
+    })
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+
+    expect(result.current.data).toEqual({ found: false, reversedCount: 0 })
+    expect(mockSupabase.from).toHaveBeenCalledTimes(1) // read only, no delete
+  })
+
+  it('deletes both refs and reports the count when the original exists', async () => {
+    const { wrapper } = makeClientAndWrapper()
+    const calls: RecordedCall[] = []
+    mockSupabase.from
+      .mockImplementationOnce(() => chainable(ok([{ id: 'orig-1' }, { id: 'fee-1' }]), (c) => calls.push(c)))
+      .mockImplementationOnce(() => chainable(ok(null), (c) => calls.push(c)))
+
+    const { result } = renderHook(() => useReverseTransaction(), { wrapper })
+    await waitForAuthReady()
+
+    await act(async () => {
+      result.current.mutate('REF123')
+    })
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+
+    expect(result.current.data).toEqual({ found: true, reversedCount: 2 })
+    expect(calls.some((c) => c.method === 'delete')).toBe(true)
   })
 })
 

@@ -328,3 +328,78 @@ export function useDeleteTransaction() {
     onSettled: () => invalidateTransactionAndBalanceQueries(queryClient, userId),
   })
 }
+
+export interface ReverseTransactionResult {
+  /** False when no transaction with the reversed ref exists for this user (e.g. it predates the app or was never captured). */
+  found: boolean
+  /** How many rows were cancelled out (the original, plus its `${ref}-FEE` sibling if any). */
+  reversedCount: number
+}
+
+/**
+ * Apply an M-PESA reversal (PRD §F2 / §4.5 "the number never lies"): find the
+ * transaction(s) with `mpesa_ref` in `{ reversalOfRef, ${reversalOfRef}-FEE }`
+ * and DELETE them so the original nets to zero in every total — never book the
+ * reversal itself as a fresh income/expense. When the original isn't found the
+ * call is a no-op that reports `found: false`, so the caller can route the user
+ * to manual review rather than silently guessing (parser contract, types.ts).
+ */
+export function useReverseTransaction() {
+  const queryClient = useQueryClient()
+  const userId = useAuthUserId()
+
+  return useMutation<ReverseTransactionResult, Error, string, MutationContext>({
+    mutationFn: async (reversalOfRef) => {
+      if (!userId) throw new Error('useReverseTransaction: no authenticated user')
+      const refs = [reversalOfRef, `${reversalOfRef}-FEE`]
+      const { data: existing, error: readError } = await supabase
+        .from('transactions')
+        .select('id')
+        .eq('user_id', userId)
+        .in('mpesa_ref', refs)
+      if (readError) throw readError
+      const ids = (existing ?? []).map((row) => row.id)
+      if (ids.length === 0) return { found: false, reversedCount: 0 }
+
+      const { error: deleteError } = await supabase.from('transactions').delete().in('id', ids)
+      if (deleteError) throw deleteError
+      return { found: true, reversedCount: ids.length }
+    },
+    onMutate: async (reversalOfRef) => {
+      await cancelTransactionAndBalanceQueries(queryClient, userId)
+
+      const snapshots = snapshotTransactionLists(queryClient, userId)
+      const previousBalances = queryClient.getQueryData<AccountBalance[]>(accountBalanceKeys.all(userId))
+      const refs = new Set([reversalOfRef, `${reversalOfRef}-FEE`])
+
+      // Unique-by-id across every cached list, so a row present in two lists
+      // (Home + Transactions) only reverses its balance once.
+      const removing = new Map<string, Transaction>()
+      for (const { data } of snapshots) {
+        for (const t of data ?? []) {
+          if (t.mpesa_ref && refs.has(t.mpesa_ref)) removing.set(t.id, t)
+        }
+      }
+
+      for (const { key, data } of snapshots) {
+        if (!data) continue
+        queryClient.setQueryData<Transaction[]>(
+          key,
+          data.filter((t) => !(t.mpesa_ref && refs.has(t.mpesa_ref))),
+        )
+      }
+
+      if (previousBalances && removing.size > 0) {
+        let balances = previousBalances
+        for (const t of removing.values()) {
+          balances = applyBalanceDeltas(balances, negateDeltas(transactionBalanceDeltas(t)))
+        }
+        queryClient.setQueryData<AccountBalance[]>(accountBalanceKeys.all(userId), balances)
+      }
+
+      return { snapshots, previousBalances }
+    },
+    onError: (_err, _ref, context) => rollback(queryClient, userId, context),
+    onSettled: () => invalidateTransactionAndBalanceQueries(queryClient, userId),
+  })
+}

@@ -13,7 +13,7 @@ import { CATEGORY_NAMES, normalizeMerchant, resolveMerchantCategory } from '../.
 import { INCOME_CATEGORY_NAMES, type CategoryName } from '../../parser/types'
 import { buildParsedRows } from './buildParsedRows'
 import { useMerchantRules, useSetMerchantRule } from './merchantMemory'
-import { useSaveParsedTransactions } from './mutations'
+import { useReverseTransaction, useSaveParsedTransactions } from './mutations'
 import { useAccounts, useCategories } from './queries'
 import { useParseMessage, type ParseOutcome } from './useParseMessage'
 
@@ -53,6 +53,7 @@ export function PasteToParseFlow({ onClose, onFallbackToManual, initialText }: P
   const merchantRulesQuery = useMerchantRules()
   const parseMessage = useParseMessage()
   const saveParsed = useSaveParsedTransactions()
+  const reverseTransaction = useReverseTransaction()
   const setMerchantRule = useSetMerchantRule()
 
   const [outcome, setOutcome] = useState<ParseOutcome | null>(null)
@@ -138,13 +139,29 @@ export function PasteToParseFlow({ onClose, onFallbackToManual, initialText }: P
   // ---- Stage 2: confirm ----
   const handleConfirm = (edits: ParseConfirmationEdits) => {
     if (parsed.family === 'reversal') {
-      // Deferred: reversal auto-matching needs the negate-original mutation.
-      showToast({
-        title: 'Reversal noted',
-        description: 'Automatic reversal matching is coming soon — adjust the original entry by hand for now.',
-        variant: 'warn',
+      // Match the original by ref and cancel it out — never book the reversal
+      // as a fresh income/expense (PRD §4.5 "the number never lies").
+      if (!parsed.reversalOfRef) {
+        showToast({ title: "Couldn't read the reversal", variant: 'warn' })
+        onClose()
+        return
+      }
+      reverseTransaction.mutate(parsed.reversalOfRef, {
+        onSuccess: ({ found, reversedCount }) => {
+          if (found) {
+            const plural = reversedCount === 1 ? 'entry' : 'entries'
+            showToast({ title: 'Reversed', description: `Cancelled out ${reversedCount} ${plural}.`, variant: 'success' })
+          } else {
+            showToast({
+              title: "Couldn't find the original",
+              description: "We don't have that transaction — adjust it by hand if you need to.",
+              variant: 'warn',
+            })
+          }
+          onClose()
+        },
+        onError: () => showToast({ title: "Couldn't reverse that", description: 'Try again.', variant: 'warn' }),
       })
-      onClose()
       return
     }
     if (!edits.accountId) {
@@ -187,7 +204,7 @@ export function PasteToParseFlow({ onClose, onFallbackToManual, initialText }: P
         onConfirm={handleConfirm}
         onEditCategory={() => setEditingCategory(true)}
         onCancel={onClose}
-        saving={saveParsed.isPending}
+        saving={saveParsed.isPending || reverseTransaction.isPending}
       />
     </ParseTransform>
   )
