@@ -40,10 +40,14 @@ export default defineConfig({
             purpose: 'maskable',
           },
         ],
+        // GET share target (PRD F3): a shared SMS opens the app at
+        // /?title=…&text=…&url=…, which Home reads to launch the paste-parse
+        // flow. GET (not POST) keeps this to query-string parsing with no
+        // service-worker interception — M-PESA SMS are short, well within URL
+        // limits. See src/lib/shareTarget.ts.
         share_target: {
-          action: '/add',
-          method: 'POST',
-          enctype: 'application/x-www-form-urlencoded',
+          action: '/',
+          method: 'GET',
           params: {
             title: 'title',
             text: 'text',

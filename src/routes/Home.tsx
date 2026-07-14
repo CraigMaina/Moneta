@@ -1,7 +1,9 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { TZDate } from '@date-fns/tz'
 import { format } from 'date-fns'
+import { extractSharedText } from '../lib/shareTarget'
 import { AmountDisplay, type AmountDisplayTone } from '../components/ui/AmountDisplay'
 import { Button } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
@@ -28,7 +30,39 @@ export function Home() {
   const openSheet = useUiStore((state) => state.openSheet)
   const closeSheet = useUiStore((state) => state.closeSheet)
 
+  const [searchParams, setSearchParams] = useSearchParams()
+
+  // Web Share Target (PRD F3): a shared SMS lands here as ?text=…&url=…&title=….
+  // Derived (no state) so there's no setState-in-effect; the effect only opens
+  // the sheet, and the close handler strips the params from the URL.
+  const sharedText = useMemo(
+    () =>
+      extractSharedText({
+        text: searchParams.get('text'),
+        url: searchParams.get('url'),
+        title: searchParams.get('title'),
+      }) ?? undefined,
+    [searchParams],
+  )
+
+  // Open the Add sheet straight into paste mode when a share arrives. `openSheet`
+  // is a store action, not React state, and `sharedText` is a stable primitive,
+  // so this fires once per distinct share and never loops.
+  useEffect(() => {
+    if (sharedText) openSheet('add')
+  }, [sharedText, openSheet])
+
   const openAddSheet = () => openSheet('add')
+  // Closing strips the shared params from the URL (privacy + so a reopen starts
+  // on the keypad, not paste) — a handler, so no setState-in-effect.
+  const closeAddSheet = () => {
+    closeSheet()
+    if (searchParams.has('text') || searchParams.has('url') || searchParams.has('title')) {
+      const next = new URLSearchParams(searchParams)
+      for (const key of ['text', 'url', 'title']) next.delete(key)
+      setSearchParams(next, { replace: true })
+    }
+  }
 
   return (
     <main className="min-h-dvh bg-paper-0 pb-28">
@@ -55,7 +89,7 @@ export function Home() {
       </div>
 
       <TabBar onAddPress={openAddSheet} />
-      <AddTransactionSheet open={activeSheet === 'add'} onClose={closeSheet} />
+      <AddTransactionSheet open={activeSheet === 'add'} onClose={closeAddSheet} initialSharedText={sharedText} />
     </main>
   )
 }

@@ -1,17 +1,11 @@
 import { useSearchParams } from 'react-router-dom'
 
 /**
- * Landing route for the manual Add flow and the Web Share Target
- * (`share_target` in the manifest, PRD F3). This is a Phase 0 placeholder —
- * the real Add sheet (keypad, paste-parse) is built by the design/feature
- * engineers in a later phase.
- *
- * Note: the manifest declares a POST share target. Reading a POST body in
- * an SPA requires a service worker fetch handler that redirects the shared
- * payload into GET query params (`text`, `title`, `url`) before this route
- * ever renders — that interception is deferred to the phase that implements
- * F2/F3 parsing. This route already reads those params so it composes
- * cleanly with that future work.
+ * Legacy `/add` placeholder. The real Add flow is the sheet on Home (keypad +
+ * paste-parse), and the Web Share Target (PRD F3) is now a GET target whose
+ * action is `/` — a shared SMS opens Home directly and launches paste-parse
+ * (see `src/lib/shareTarget.ts` + `routes/Home.tsx`). This route no longer
+ * participates in sharing; it just reads `?text` for backwards compatibility.
  */
 export function Add() {
   const [searchParams] = useSearchParams()
