@@ -32,4 +32,18 @@ export default defineConfig([
       globals: globals.node,
     },
   },
+  {
+    // Deno Edge Functions (supabase/functions/**) run on a different
+    // runtime than the Vite/Node app: `Deno`/`Deno.serve`/`Deno.env` are
+    // Deno-only globals, and bare-specifier imports (`zod`,
+    // `@supabase/supabase-js`) resolve via each function's own `deno.json`
+    // import map rather than node_modules. Adding the Deno global set here
+    // (on top of the existing browser/node sets, which already cover
+    // `fetch`/`crypto`/`console`/etc) keeps `no-undef`-style checks correct
+    // for this folder without weakening any other rule.
+    files: ['supabase/functions/**/*.ts'],
+    languageOptions: {
+      globals: { ...globals.browser, ...globals.node, ...globals.denoBuiltin },
+    },
+  },
 ])

@@ -174,3 +174,44 @@ _Read this first at the start of every session. Append at the end of every sessi
 3. Multi-instrument messages that bundle a payment AND a Fuliza drawdown notice into a single SMS (some real Safaricom formats do this) — this parser treats Fuliza drawdown as its own distinct message shape; a combined message would currently go `unmatched` rather than being decomposed into two events.
 
 **Not committed** — left for the lead to review the money-path/contract pieces and commit, per brief instructions.
+
+## Phase 3 — `parse-sms` Edge Function + `parse_misses` miss-log (backend-engineer)
+
+**Scope:** `supabase/` only (migration + Edge Function + pgTAP), plus one `eslint.config.js` override block. Did not touch `src/parser/` or `src/features/`, per brief.
+
+**Files added:**
+- `supabase/migrations/20260714100000_create_parse_misses.sql` — the miss-logging table: `id`, `user_id` (FK → `auth.users`, cascade), `raw_sms`, `raw_sms_hash`, `llm_succeeded` (default `false`), `parser_version`, `resolved` (default `false`), `created_at`. RLS enabled with the standard 4 `user_id = auth.uid()` policies + grants (same pattern as every other table). Partial unique index `(user_id, raw_sms_hash)` — the dedupe backbone, mirroring `transactions.mpesa_ref`.
+- `supabase/tests/database/parse_misses.test.sql` (new, 7 pgTAP assertions) + `supabase/tests/database/rls.test.sql` (extended: `plan(25)` → `plan(26)`, added `has_table` for `parse_misses`).
+- `supabase/functions/parse-sms/deno.json` — per-function import map (`zod`, `@supabase/supabase-js` → their `npm:` specifiers), the modern Supabase convention; lets `schema.ts`/`prompt.ts` use plain bare-specifier imports resolvable by both Deno and Vitest/Node.
+- `supabase/functions/parse-sms/schema.ts` — the `ParsedMpesaMessage` contract hand-mirrored from `src/parser/types.ts` (field-for-field, including the `superRefine` cross-field invariants), plus `interpretToolUse(toolUse, rawSms)` — the pure, unit-tested core that turns an Anthropic tool call into either `{status:'matched', data}` or `{status:'manual', raw}`. Explicit "MUST stay in sync with src/parser/types.ts" header comment.
+- `supabase/functions/parse-sms/prompt.ts` — the system prompt (money rules, category/family enums, Africa/Nairobi `+03:00` timestamp instruction, "never guess") and the two forced Anthropic tools (`extract_mpesa_transaction` / `not_mpesa_message`).
+- `supabase/functions/parse-sms/index.ts` — the Deno HTTP handler: verifies the caller's JWT (via an anon-key client with the caller's own `Authorization` header forwarded + `auth.getUser()` — never the service-role key), zod-validates `{text: string}`, calls the Anthropic Messages API with forced tool-use, runs the result through `interpretToolUse`, upserts `parse_misses` (deduped on `user_id,raw_sms_hash`), and returns `{status:'matched', data}` / `{status:'manual', raw}` / a typed `{error:{code,message}}` envelope. CORS + OPTIONS handled.
+- `supabase/functions/parse-sms/schema.test.ts` — 8 Vitest tests against `interpretToolUse` (valid extraction → matched; valid transfer → matched with null category; cross-field-invariant violation → manual; basic field-validation failure → manual; missing-required-fields tool input → manual; `not_mpesa_message` sentinel → manual; no tool call at all → manual; unrecognized tool name → manual). No network/secrets/Deno globals — runs under plain `npm run test`.
+
+**Request/response contract:**
+- `POST` (Authorization: `Bearer <user JWT>`) `{ text: string }` (1–2000 chars)
+- `200 { status: 'matched', data: ParsedMpesaMessage }` — `data.parserVersion === 'llm'`, `data.patternId === 'llm-fallback'`, every other field identical in shape to `src/parser/types.ts`'s `ParsedMpesaMessage` (verified directly against the lead's `parsedToInserts.ts`, which consumes exactly this shape).
+- `200 { status: 'manual', raw: string }` — parseable:false / any validation failure / any Anthropic-call failure. Client should prefill manual entry with `raw`.
+- `401 unauthorized` (missing/invalid JWT) · `400 invalid_request` (bad body) · `405 method_not_allowed` · `500 server_error` (missing `SUPABASE_URL`/`SUPABASE_ANON_KEY`/`ANTHROPIC_API_KEY` secrets) — all `{ error: { code, message } }`, never a stack trace or the API key.
+
+**Model:** `claude-haiku-4-5-20251001` (bounded fallback-only traffic; brief's own recommendation).
+
+**Deploy + secrets (for the lead/user to run — this environment has no Supabase login/Docker):**
+```bash
+supabase functions deploy parse-sms
+supabase secrets set ANTHROPIC_API_KEY=sk-ant-...
+```
+(`SUPABASE_URL`/`SUPABASE_ANON_KEY`/`SUPABASE_SERVICE_ROLE_KEY` are auto-provided to every Edge Function by the platform — no manual secret needed for those; this function never uses the service-role key at all.)
+
+**DB verification (for the lead — no `SUPABASE_DB_URL` available in this environment):**
+```bash
+supabase db push
+SUPABASE_DB_URL=… node supabase/tests/run-pgtap.mjs supabase/tests/database/rls.test.sql
+SUPABASE_DB_URL=… node supabase/tests/run-pgtap.mjs supabase/tests/database/parse_misses.test.sql
+```
+
+**Test evidence:** `npm run lint` clean project-wide. `npx vitest run supabase/functions/parse-sms/schema.test.ts` → **8/8 green**. Full `npm run test` → 39/40 files, 336/337 tests green — the 1 failing file (`src/features/parser/ParseConfirmationCard.test.tsx`) and the `npm run typecheck` errors (`src/features/parser/parseConfirmationLogic.test.ts`) are both untracked, in-progress files from a concurrent agent's session, not touched or introduced by this slice (confirmed via `git status` — `??`, and by running this slice's own test file in isolation). `npm run test:rls` was **not** runnable here (no `SUPABASE_DB_URL`) — confirmed it fails cleanly with its documented message rather than crashing; needs the lead to run against cloud per the commands above.
+
+**Assumptions recorded in DECISIONS.md:** the (functionally-no-op-today) partial-vs-plain unique index choice on `raw_sms_hash`; `resolved` has no automatic-flip mechanism yet; no service-role key used anywhere in this function; forced-tool-use over free-text-JSON-parsing for the Anthropic call; an Anthropic infra failure folds into the same `manual` 200 response as a validation failure (never a 5xx the client can't act on); the `deno.json` import-map trick that makes `schema.ts`/`prompt.ts` importable unmodified by both Deno and Vitest; the new `eslint.config.js` Deno-globals override; `rls.test.sql`'s extension.
+
+**Not committed** — left for the lead to review and commit, per brief instructions.

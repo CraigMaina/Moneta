@@ -12,7 +12,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(25);
+select plan(26);
 
 -- ---------------------------------------------------------------------
 -- 1. Every public table has row level security enabled.
@@ -96,7 +96,9 @@ select is(
 );
 
 -- ---------------------------------------------------------------------
--- 7-16. Schema shape: every PRD §7 table exists.
+-- 7-17. Schema shape: every PRD §7 table exists, plus parse_misses (Phase 3
+-- LLM-fallback miss log — not a PRD §7 table, but must ship under the same
+-- "RLS on every public table" guarantee this suite enforces dynamically).
 -- ---------------------------------------------------------------------
 select has_table('public', 'accounts', 'accounts table exists');
 select has_table('public', 'categories', 'categories table exists');
@@ -108,14 +110,15 @@ select has_table('public', 'recurring_items', 'recurring_items table exists');
 select has_table('public', 'profiles', 'profiles table exists');
 select has_table('public', 'streaks', 'streaks table exists');
 select has_table('public', 'challenges', 'challenges table exists');
+select has_table('public', 'parse_misses', 'parse_misses table exists');
 
 -- ---------------------------------------------------------------------
--- 16. Derived balances view exists.
+-- 18. Derived balances view exists.
 -- ---------------------------------------------------------------------
 select has_view('public', 'account_balances', 'account_balances view exists');
 
 -- ---------------------------------------------------------------------
--- 17-22. Positive/negative cross-user access test on `accounts`.
+-- 19-24. Positive/negative cross-user access test on `accounts`.
 -- ---------------------------------------------------------------------
 
 -- Two synthetic auth users (rolled back with the rest of this transaction).
