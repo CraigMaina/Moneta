@@ -139,3 +139,38 @@ _Read this first at the start of every session. Append at the end of every sessi
 - **Fixed a user-reported bug:** the safe-to-spend hero didn't recompute after logging a transaction (balances updated, but the number needed a page refresh). Root cause: the hook froze `now` at mount, so a just-logged row (occurred_at after mount) was excluded twice — by `calcSafeToSpend`'s future-row filter and by the period query's `to: now` upper bound on refetch. Fix: fetch `to: periodEnd` and evaluate spend at an `evaluationNow` that refreshes on `transactionsQuery.dataUpdatedAt`. Commit `56a6690`.
 - **Verified live** in the browser (logged-in session): logging a KES 666 expense moved the hero (2,797.38 → 5,538.16) and posted the expense row + M-PESA −666 with no refresh. `npm run check` green (201 tests / 28 files).
 - Remaining Phase 2 gates: broader live manual E2E + 390×844 visual QA of populated screens (deferred; not blocking Phase 3 parser work, which is pure logic).
+
+## Phase 3 — M-PESA parser core (parser-engineer)
+
+**Scope:** `src/parser/` only — deterministic, offline, pure pattern-table parser. No DB/components/Edge Functions/`src/features/` touched (one 1-line `tsconfig.app.json` flag addition, see DECISIONS.md).
+
+**Files added:**
+- `src/parser/types.ts` — `parsedMpesaMessageSchema` (zod) + `ParsedMpesaMessage` type, the contract two other agents (backend Edge Function LLM fallback, design confirmation card) build against. Includes a large doc comment specifying exactly how the integrator turns one parsed message into 1–2 transaction rows for every family (the withdrawal/deposit/Fuliza/reversal hard cases).
+- `src/parser/money.ts` (+ test) — `parseMoneyToCents`: integer-cents-only money parsing ("Ksh1,450.50"/"KES 1,450"/"1,234" → cents), never float math.
+- `src/parser/timestamp.ts` (+ test) — `parseMpesaTimestamp`: M-PESA "D/M/YY at H:MM AM/PM" → correct Africa/Nairobi ISO instant via `TZDate`, rejecting calendrically-impossible dates.
+- `src/parser/merchant.ts` (+ test) — `normalizeMerchant` (canonical merchant-memory key) + `resolveMerchantCategory` (pure rule matcher; no Supabase).
+- `src/parser/patterns.json` — versioned (`"pattern-2026.07"`), 15 ordered regex entries covering all 12 PRD §F2 families (reversal/Fuliza/M-Shwari-KCB/withdrawal/deposit ordered before the generic paybill/buy-goods/pochi/sent-to-person/received patterns they'd otherwise be shadowed by).
+- `src/parser/patternTable.ts` (+ test) — loads + zod-validates `patterns.json` at import time, compiles each entry to a `RegExp`.
+- `src/parser/index.ts` (+ test) — `parseMpesaMessage(text): ParseResult`, tries each pattern in order, validates the assembled candidate through the schema, never guesses (schema failure → `unmatched`, same as no match).
+- `src/parser/semantics.test.ts` — dedicated tests for the money-critical semantics: withdrawal = transfer + separate fee (never a single expense), deposit = transfer with no fee, Fuliza drawdown is never `income`, reversal carries `reversalOfRef` and is never booked as plain income/expense, and dedupe idempotency (re-parsing the same SMS is deterministic/no-op-safe).
+- `src/parser/__fixtures__/` — 68 fixtures (61 matched across all 12 families + 7 deliberate `unmatched` edge cases: empty string, OTP message, statement-ready notice, impossible calendar date, truncated SMS, noise, balance-inquiry response), each pairing a raw SMS with its fully-expected parse result.
+- `src/parser/corpus.test.ts` — field-level accuracy gate; scores every one of 15 fields + match-status per fixture (not pass/fail per message) and prints the exact percentage.
+
+**Result: 100.00% field accuracy (983/983 fields) across the 68-fixture corpus** — well above the 98% PRD §F2 target. `npm run test:parser` (7 files, 47 tests) and `npm run check` (35 files, 248 tests total) both green.
+
+**Families covered (all 12 from PRD §F2):** received, sent_to_person, paybill, buy_goods, pochi_la_biashara, withdrawal, deposit, airtime, fuliza_drawdown, fuliza_repayment, mshwari_kcb_transfer (in+out, and KCB variant), reversal.
+
+**Integration contract for the next agent who wires this to the DB (`src/features/transactions/` or similar):**
+- 1 row for: `received`, `sent_to_person`, `paybill`, `buy_goods`, `pochi_la_biashara`, `airtime` (plus a 2nd fee-expense row if `feeCents > 0`).
+- 1 transfer row for: `deposit`, `fuliza_drawdown`, `fuliza_repayment`, `mshwari_kcb_transfer` (direction from `transferDirection`; account type from `counterAccountHint`).
+- 2 rows for `withdrawal` (and `fuliza_drawdown` when it carries an access fee): a transfer row (`amountCents`) + a "Fees & Fuliza charges" expense row (`feeCents`) — use `` `${mpesaRef}-FEE` `` as the fee row's own `mpesa_ref` so both rows dedupe independently against the DB's per-user-unique index.
+- `reversal`: look up the existing transaction by `mpesa_ref === reversalOfRef` and negate it (delete, or an offsetting entry) — never insert the reversal itself as a new income/expense row. Full detail in the `types.ts` doc comment (family-by-family, ~80 lines).
+
+**Assumptions recorded in DECISIONS.md:** `resolveJsonModule` tsconfig addition; `merchant` field is display-clean, not normalized (call `normalizeMerchant` separately for `merchant_rules` lookups); Fuliza/M-Shwari-KCB bucketed under `counterAccountHint: 'bank'` (v1 has no dedicated loan/savings account type); reversal's `kind: 'transfer'` is a safety marker only, exempted from the hint/direction invariant; withdrawal/Fuliza fee rows need a distinct `mpesa_ref` suffix convention; Pochi la Biashara vs. plain send-to-person is a real, only-partially-solvable ambiguity on the paying customer's own SMS (documented fallback: unmarked Pochi payments parse as `sent_to_person`, still a correct expense, just uncategorized).
+
+**Message shapes NOT handled deterministically (LLM-fallback / stored-miss candidates):**
+1. Pochi la Biashara payments that don't carry an explicit "POCHI LA BIASHARA"-style marker in the recipient name (falls through to `sent_to_person`, which is safe but not precisely tagged).
+2. Any format drift Safaricom introduces beyond the shapes modeled here (e.g. different sentence ordering, added promotional text mid-message, non-Kenyan-format dates) — by design, these fail closed to `unmatched` rather than guessing, per CLAUDE.md/PRD's "never a guess" rule; that's exactly the traffic the LLM fallback + stored-raw-message-for-pattern-authoring pipeline (owned by the backend/Edge Function agent) is meant to catch.
+3. Multi-instrument messages that bundle a payment AND a Fuliza drawdown notice into a single SMS (some real Safaricom formats do this) — this parser treats Fuliza drawdown as its own distinct message shape; a combined message would currently go `unmatched` rather than being decomposed into two events.
+
+**Not committed** — left for the lead to review the money-path/contract pieces and commit, per brief instructions.

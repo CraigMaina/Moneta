@@ -7,6 +7,9 @@
     "types": ["vite/client", "vitest/globals", "@testing-library/jest-dom"],
     "allowArbitraryExtensions": true,
     "skipLibCheck": true,
+    // Needed so src/parser/patternTable.ts can `import` patterns.json directly
+    // (CLAUDE.md: "the pattern table is data" — versioned JSON, not inlined).
+    "resolveJsonModule": true,
 
     /* Bundler mode */
     "moduleResolution": "bundler",

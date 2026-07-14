@@ -1,0 +1,155 @@
+{
+  "version": "pattern-2026.07",
+  "patterns": [
+    {
+      "id": "reversal-v1",
+      "family": "reversal",
+      "kind": "transfer",
+      "category": null,
+      "counterAccountHint": null,
+      "transferDirection": null,
+      "flags": "i",
+      "regex": "^(?<ref>[A-Z0-9]{8,12})\\s+Confirmed\\.\\s*The reversal of Ksh(?<amount>[\\d,]+(?:\\.\\d{1,2})?)\\s+for transaction (?<origRef>[A-Z0-9]{8,12})\\s+on (?<date>\\d{1,2}/\\d{1,2}/\\d{2,4}) at (?<time>\\d{1,2}:\\d{2}\\s?[AP]M) is complete\\.(?:\\s*New M-PESA balance is Ksh(?<balance>[\\d,]+(?:\\.\\d{1,2})?)\\.)?"
+    },
+    {
+      "id": "fuliza-drawdown-v1",
+      "family": "fuliza_drawdown",
+      "kind": "transfer",
+      "category": null,
+      "counterAccountHint": "bank",
+      "transferDirection": "counter_to_mpesa",
+      "flags": "i",
+      "regex": "^(?<ref>[A-Z0-9]{8,12})\\s+Confirmed\\.\\s*You have used Fuliza M-PESA\\.\\s*Amount used Ksh(?<amount>[\\d,]+(?:\\.\\d{1,2})?)\\s+on (?<date>\\d{1,2}/\\d{1,2}/\\d{2,4}) at (?<time>\\d{1,2}:\\d{2}\\s?[AP]M)\\.(?:\\s*Access fee charged Ksh(?<fee>[\\d,]+(?:\\.\\d{1,2})?)\\.)?(?:\\s*Total Fuliza M-PESA outstanding is Ksh[\\d,]+(?:\\.\\d{1,2})?\\.)?(?:\\s*New M-PESA balance is Ksh(?<balance>[\\d,]+(?:\\.\\d{1,2})?)\\.)?"
+    },
+    {
+      "id": "fuliza-repayment-v1",
+      "family": "fuliza_repayment",
+      "kind": "transfer",
+      "category": null,
+      "counterAccountHint": "bank",
+      "transferDirection": "mpesa_to_counter",
+      "flags": "i",
+      "regex": "^(?<ref>[A-Z0-9]{8,12})\\s+Confirmed\\.\\s*Ksh(?<amount>[\\d,]+(?:\\.\\d{1,2})?)\\s+from your M-PESA has been used to pay your outstanding Fuliza M-PESA on (?<date>\\d{1,2}/\\d{1,2}/\\d{2,4}) at (?<time>\\d{1,2}:\\d{2}\\s?[AP]M)\\.(?:\\s*New Fuliza M-PESA outstanding amount is Ksh[\\d,]+(?:\\.\\d{1,2})?\\.)?(?:\\s*New M-PESA balance is Ksh(?<balance>[\\d,]+(?:\\.\\d{1,2})?)\\.)?"
+    },
+    {
+      "id": "mshwari-out-v1",
+      "family": "mshwari_kcb_transfer",
+      "kind": "transfer",
+      "category": null,
+      "counterAccountHint": "bank",
+      "transferDirection": "mpesa_to_counter",
+      "flags": "i",
+      "regex": "^(?<ref>[A-Z0-9]{8,12})\\s+Confirmed\\.\\s*Ksh(?<amount>[\\d,]+(?:\\.\\d{1,2})?)\\s+transferred to M-Shwari account on (?<date>\\d{1,2}/\\d{1,2}/\\d{2,4}) at (?<time>\\d{1,2}:\\d{2}\\s?[AP]M)\\.(?:\\s*New M-PESA balance is Ksh(?<balance>[\\d,]+(?:\\.\\d{1,2})?)\\.)?"
+    },
+    {
+      "id": "mshwari-in-v1",
+      "family": "mshwari_kcb_transfer",
+      "kind": "transfer",
+      "category": null,
+      "counterAccountHint": "bank",
+      "transferDirection": "counter_to_mpesa",
+      "flags": "i",
+      "regex": "^(?<ref>[A-Z0-9]{8,12})\\s+Confirmed\\.\\s*Ksh(?<amount>[\\d,]+(?:\\.\\d{1,2})?)\\s+transferred from M-Shwari account to your M-PESA account on (?<date>\\d{1,2}/\\d{1,2}/\\d{2,4}) at (?<time>\\d{1,2}:\\d{2}\\s?[AP]M)\\.(?:\\s*New M-PESA balance is Ksh(?<balance>[\\d,]+(?:\\.\\d{1,2})?)\\.)?"
+    },
+    {
+      "id": "kcb-out-v1",
+      "family": "mshwari_kcb_transfer",
+      "kind": "transfer",
+      "category": null,
+      "counterAccountHint": "bank",
+      "transferDirection": "mpesa_to_counter",
+      "flags": "i",
+      "regex": "^(?<ref>[A-Z0-9]{8,12})\\s+Confirmed\\.\\s*Ksh(?<amount>[\\d,]+(?:\\.\\d{1,2})?)\\s+transferred to KCB M-PESA account on (?<date>\\d{1,2}/\\d{1,2}/\\d{2,4}) at (?<time>\\d{1,2}:\\d{2}\\s?[AP]M)\\.(?:\\s*New M-PESA balance is Ksh(?<balance>[\\d,]+(?:\\.\\d{1,2})?)\\.)?"
+    },
+    {
+      "id": "kcb-in-v1",
+      "family": "mshwari_kcb_transfer",
+      "kind": "transfer",
+      "category": null,
+      "counterAccountHint": "bank",
+      "transferDirection": "counter_to_mpesa",
+      "flags": "i",
+      "regex": "^(?<ref>[A-Z0-9]{8,12})\\s+Confirmed\\.\\s*Ksh(?<amount>[\\d,]+(?:\\.\\d{1,2})?)\\s+transferred from KCB M-PESA account to your M-PESA account on (?<date>\\d{1,2}/\\d{1,2}/\\d{2,4}) at (?<time>\\d{1,2}:\\d{2}\\s?[AP]M)\\.(?:\\s*New M-PESA balance is Ksh(?<balance>[\\d,]+(?:\\.\\d{1,2})?)\\.)?"
+    },
+    {
+      "id": "withdrawal-v1",
+      "family": "withdrawal",
+      "kind": "transfer",
+      "category": null,
+      "counterAccountHint": "cash",
+      "transferDirection": "mpesa_to_counter",
+      "flags": "i",
+      "regex": "^(?<ref>[A-Z0-9]{8,12})\\s+Confirmed\\.\\s*You have withdrawn Ksh(?<amount>[\\d,]+(?:\\.\\d{1,2})?)\\s+from agent (?<party>\\d+\\s*-\\s*[A-Za-z0-9 &.'\\-]+?) on (?<date>\\d{1,2}/\\d{1,2}/\\d{2,4}) at (?<time>\\d{1,2}:\\d{2}\\s?[AP]M)\\.(?:\\s*New M-PESA balance is Ksh(?<balance>[\\d,]+(?:\\.\\d{1,2})?)\\.)?(?:\\s*Transaction cost,\\s?Ksh(?<fee>[\\d,]+(?:\\.\\d{1,2})?)\\.)?"
+    },
+    {
+      "id": "deposit-v1",
+      "family": "deposit",
+      "kind": "transfer",
+      "category": null,
+      "counterAccountHint": "cash",
+      "transferDirection": "counter_to_mpesa",
+      "flags": "i",
+      "regex": "^(?<ref>[A-Z0-9]{8,12})\\s+Confirmed\\.\\s*You have deposited Ksh(?<amount>[\\d,]+(?:\\.\\d{1,2})?)\\s+to your M-PESA account from agent (?<party>\\d+\\s*-\\s*[A-Za-z0-9 &.'\\-]+?) on (?<date>\\d{1,2}/\\d{1,2}/\\d{2,4}) at (?<time>\\d{1,2}:\\d{2}\\s?[AP]M)\\.(?:\\s*New M-PESA balance is Ksh(?<balance>[\\d,]+(?:\\.\\d{1,2})?)\\.)?"
+    },
+    {
+      "id": "pochi-la-biashara-v1",
+      "family": "pochi_la_biashara",
+      "kind": "expense",
+      "category": null,
+      "counterAccountHint": null,
+      "transferDirection": null,
+      "flags": "i",
+      "regex": "^(?<ref>[A-Z0-9]{8,12})\\s+Confirmed\\.\\s*Ksh(?<amount>[\\d,]+(?:\\.\\d{1,2})?)\\s+sent to (?<party>[A-Za-z0-9 &.'\\-]+? - POCHI LA BIASHARA)\\s+\\d{9,12} on (?<date>\\d{1,2}/\\d{1,2}/\\d{2,4}) at (?<time>\\d{1,2}:\\d{2}\\s?[AP]M)\\.(?:\\s*New M-PESA balance is Ksh(?<balance>[\\d,]+(?:\\.\\d{1,2})?)\\.)?(?:\\s*Transaction cost,\\s?Ksh(?<fee>[\\d,]+(?:\\.\\d{1,2})?)\\.)?"
+    },
+    {
+      "id": "paybill-v1",
+      "family": "paybill",
+      "kind": "expense",
+      "category": null,
+      "counterAccountHint": null,
+      "transferDirection": null,
+      "flags": "i",
+      "regex": "^(?<ref>[A-Z0-9]{8,12})\\s+Confirmed\\.\\s*Ksh(?<amount>[\\d,]+(?:\\.\\d{1,2})?)\\s+paid to (?<party>[A-Za-z0-9 &.'\\-]+?) for account (?<account>[A-Za-z0-9\\-]+) on (?<date>\\d{1,2}/\\d{1,2}/\\d{2,4}) at (?<time>\\d{1,2}:\\d{2}\\s?[AP]M)\\.(?:\\s*New M-PESA balance is Ksh(?<balance>[\\d,]+(?:\\.\\d{1,2})?)\\.)?(?:\\s*Transaction cost,\\s?Ksh(?<fee>[\\d,]+(?:\\.\\d{1,2})?)\\.)?"
+    },
+    {
+      "id": "buy-goods-v1",
+      "family": "buy_goods",
+      "kind": "expense",
+      "category": null,
+      "counterAccountHint": null,
+      "transferDirection": null,
+      "flags": "i",
+      "regex": "^(?<ref>[A-Z0-9]{8,12})\\s+Confirmed\\.\\s*Ksh(?<amount>[\\d,]+(?:\\.\\d{1,2})?)\\s+paid to (?<party>[A-Za-z0-9 &.'\\-]+?)\\.\\s+on (?<date>\\d{1,2}/\\d{1,2}/\\d{2,4}) at (?<time>\\d{1,2}:\\d{2}\\s?[AP]M)\\.(?:\\s*New M-PESA balance is Ksh(?<balance>[\\d,]+(?:\\.\\d{1,2})?)\\.)?(?:\\s*Transaction cost,\\s?Ksh(?<fee>[\\d,]+(?:\\.\\d{1,2})?)\\.)?"
+    },
+    {
+      "id": "airtime-v1",
+      "family": "airtime",
+      "kind": "expense",
+      "category": "Airtime & Data",
+      "counterAccountHint": null,
+      "transferDirection": null,
+      "flags": "i",
+      "regex": "^(?<ref>[A-Z0-9]{8,12})\\s+Confirmed\\.\\s*You bought Ksh(?<amount>[\\d,]+(?:\\.\\d{1,2})?)\\s+of airtime on (?<date>\\d{1,2}/\\d{1,2}/\\d{2,4}) at (?<time>\\d{1,2}:\\d{2}\\s?[AP]M)\\.(?:\\s*New M-PESA balance is Ksh(?<balance>[\\d,]+(?:\\.\\d{1,2})?)\\.)?"
+    },
+    {
+      "id": "received-v1",
+      "family": "received",
+      "kind": "income",
+      "category": "Gift/Received",
+      "counterAccountHint": null,
+      "transferDirection": null,
+      "flags": "i",
+      "regex": "^(?<ref>[A-Z0-9]{8,12})\\s+Confirmed\\.\\s*You have received Ksh(?<amount>[\\d,]+(?:\\.\\d{1,2})?)\\s+from (?<party>[A-Za-z0-9 &.'\\-]+?)\\s+\\d{9,12} on (?<date>\\d{1,2}/\\d{1,2}/\\d{2,4}) at (?<time>\\d{1,2}:\\d{2}\\s?[AP]M)\\.(?:\\s*New M-PESA balance is Ksh(?<balance>[\\d,]+(?:\\.\\d{1,2})?)\\.)?"
+    },
+    {
+      "id": "sent-to-person-v1",
+      "family": "sent_to_person",
+      "kind": "expense",
+      "category": null,
+      "counterAccountHint": null,
+      "transferDirection": null,
+      "flags": "i",
+      "regex": "^(?<ref>[A-Z0-9]{8,12})\\s+Confirmed\\.\\s*Ksh(?<amount>[\\d,]+(?:\\.\\d{1,2})?)\\s+sent to (?<party>[A-Za-z0-9 &.'\\-]+?)\\s+\\d{9,12} on (?<date>\\d{1,2}/\\d{1,2}/\\d{2,4}) at (?<time>\\d{1,2}:\\d{2}\\s?[AP]M)\\.(?:\\s*New M-PESA balance is Ksh(?<balance>[\\d,]+(?:\\.\\d{1,2})?)\\.)?(?:\\s*Transaction cost,\\s?Ksh(?<fee>[\\d,]+(?:\\.\\d{1,2})?)\\.)?"
+    }
+  ]
+}
