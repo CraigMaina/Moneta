@@ -70,6 +70,24 @@ describe('transfer seam: income → expense → withdrawal(transfer + fee)', () 
     expect(result.isOver).toBe(false)
   })
 
+  it('when over budget, a huge transfer is still excluded and safe-to-spend is the negative period total', () => {
+    const now = new Date('2026-07-13T09:00:00+03:00')
+    const occurredAt = new Date('2026-07-05T09:00:00+03:00')
+    const result = calcSafeToSpend({
+      now,
+      expectedIncomeCents: 100000,
+      transactions: [
+        { kind: 'expense', amountCents: 150000, occurredAt }, // spent more than income → over
+        { kind: 'transfer', amountCents: 900000, occurredAt }, // must not change the number
+      ],
+    })
+    expect(result.variableSpentCents).toBe(150000) // transfer excluded
+    expect(result.isOver).toBe(true)
+    // Over budget → the negative PERIOD total, not pool/daysRemaining.
+    expect(result.poolCents).toBe(-50000)
+    expect(result.safeToSpendCents).toBe(-50000)
+  })
+
   it('re-modelling the withdrawal as a single expense would be WRONG — this is what we must never do', () => {
     // A naive "withdrawal = one expense of the whole amount" would double-hit
     // net worth and wrongly shrink safe-to-spend. Prove the correct model differs.

@@ -77,7 +77,7 @@ Each entry: date · decision · rationale · scope/impact.
 ## 2026-07-14 — Phase 2 coverage measurement (lead)
 
 - **Dependency added: `@vitest/coverage-v8` (dev).** Needed to produce the formal branch-coverage number the Phase 2 exit criterion requires for the safe-to-spend module. Added `test:coverage` script (`vitest run --coverage`).
-- **`src/lib/safeToSpend.ts`: 100% statements / 100% functions / 100% lines / 96.55% branch (28/29)** — exceeds the ≥95% exit bar. The single uncovered branch is the `Math.max(1, …)` guard on `daysRemaining`: `currentPeriod` always returns `periodEnd ≥ today`, so `differenceInCalendarDays(...) + 1 ≥ 1` and the `1` fallback is structurally unreachable. Left uncovered deliberately (a defensive floor) rather than contriving an impossible input just to paint the line green.
+- **`src/lib/safeToSpend.ts`: 100% statements / 100% functions / 100% lines / 96.55% branch (28/29)** — exceeds the ≥95% exit bar. The single uncovered branch is the **false arm of `else if (txn.kind === 'expense')`** in the transaction loop (`safeToSpend.ts:164`): a transaction reaching that line is always an `expense`, because `transfer` already `continue`d earlier and `income` is handled in the preceding `if`, so the `else if`'s negative outcome is unreachable. (Corrected from an earlier note that misattributed this to the `Math.max(1, …)` floor — that's a plain function call, not an instrumented branch.) Genuinely defensive/unreachable, not a real gap — left uncovered rather than contriving an impossible input.
 
 ## 2026-07-13 — Phase 2 start: safe-to-spend calculator semantics (lead)
 

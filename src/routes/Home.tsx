@@ -225,7 +225,9 @@ function TransactionRow({ txn, categoryName }: { txn: Transaction; categoryName?
     <div className="flex items-center justify-between gap-3 px-4 py-3">
       <div className="min-w-0">
         <p className="truncate text-[15px] font-semibold text-ink-900">{primaryLabel}</p>
-        <p className="mt-0.5 text-[12.5px] text-ink-600">{isTransfer ? 'Transfer' : formatDayLabel(txn.occurred_at)}</p>
+        {/* Always the day label — a transfer's kind is already the primary label,
+            so repeating "Transfer" here just dropped the timestamp every other row shows. */}
+        <p className="mt-0.5 text-[12.5px] text-ink-600">{formatDayLabel(txn.occurred_at)}</p>
       </div>
       <AmountDisplay cents={displayCents} tone={tone} signed={isIncome} size="body" />
     </div>
