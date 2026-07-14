@@ -403,3 +403,62 @@ export function useReverseTransaction() {
     onSettled: () => invalidateTransactionAndBalanceQueries(queryClient, userId),
   })
 }
+
+export interface ReconcileBalanceInput {
+  accountId: string
+  /** The balance the account SHOULD read (e.g. Safaricom's "New M-PESA balance"). */
+  targetBalanceCents: number
+}
+
+export interface ReconcileBalanceResult {
+  adjusted: boolean
+  /** Signed: +ve booked as income (account had untracked money in), −ve as expense (untracked out). */
+  deltaCents: number
+}
+
+/**
+ * Reconcile a derived account balance to a reported figure (PRD §F2 balance
+ * cross-check). Balances are never stored (CLAUDE.md), so "syncing" means
+ * booking ONE adjustment transaction for whatever Moneta hasn't captured: the
+ * gap between the live `account_balances` value and `targetBalanceCents`. A
+ * positive gap is untracked money-in (income), a negative gap untracked
+ * money-out (expense) — so it flows through safe-to-spend correctly, exactly
+ * as the real untracked activity would have. A zero gap is a no-op.
+ *
+ * Reads the LIVE balance from the view (not the cache), so it stays correct
+ * when run right after a save whose invalidation hasn't refetched yet.
+ */
+export function useReconcileBalance() {
+  const queryClient = useQueryClient()
+  const userId = useAuthUserId()
+
+  return useMutation<ReconcileBalanceResult, Error, ReconcileBalanceInput>({
+    mutationFn: async ({ accountId, targetBalanceCents }) => {
+      if (!userId) throw new Error('useReconcileBalance: no authenticated user')
+
+      const { data, error } = await supabase
+        .from('account_balances')
+        .select('balance_cents')
+        .eq('account_id', accountId)
+        .maybeSingle()
+      if (error) throw error
+
+      const current = data?.balance_cents ?? 0
+      const delta = targetBalanceCents - current
+      if (delta === 0) return { adjusted: false, deltaCents: 0 }
+
+      const adjustment = addTransactionSchema.parse({
+        kind: delta > 0 ? 'income' : 'expense',
+        amount_cents: Math.abs(delta),
+        account_id: accountId,
+        note: 'Balance sync',
+        source: 'manual',
+      })
+      const { error: insertError } = await supabase.from('transactions').insert({ ...adjustment, user_id: userId })
+      if (insertError) throw insertError
+
+      return { adjusted: true, deltaCents: delta }
+    },
+    onSettled: () => invalidateTransactionAndBalanceQueries(queryClient, userId),
+  })
+}

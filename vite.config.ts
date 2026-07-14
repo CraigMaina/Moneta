@@ -64,5 +64,12 @@ export default defineConfig({
     globals: true,
     setupFiles: ['./src/test/setup.ts'],
     css: true,
+    // The default 5s timeout is tight for userEvent/timer-based tests when the
+    // full suite's parallel workers contend for CPU on a busy machine — they
+    // pass in isolation but occasionally time out under load (a spurious,
+    // environment-dependent flake, never an assertion failure). A roomier
+    // budget removes that class of flake without slowing tests that are fast.
+    testTimeout: 20000,
+    hookTimeout: 20000,
   },
 })

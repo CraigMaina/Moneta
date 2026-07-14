@@ -124,7 +124,10 @@ describe('AddTransactionSheet', () => {
     const mutate = vi.fn((_input, opts?: { onSuccess?: () => void }) => opts?.onSuccess?.())
     useAddTransactionMock.mockReturnValue({ mutate, isPending: false })
     const onClose = vi.fn()
-    const user = userEvent.setup()
+    // delay: null → userEvent resolves between actions on microtasks, not
+    // setTimeout, so a multi-step flow can't time out when the full suite's
+    // parallel workers starve the macrotask queue (a real cross-file flake).
+    const user = userEvent.setup({ delay: null })
 
     renderSheet(onClose)
 
@@ -149,7 +152,10 @@ describe('AddTransactionSheet', () => {
   it('transfer correctness: switching to Transfer hides category, requires a distinct counter-account, and builds kind:transfer with category_id null', async () => {
     const mutate = vi.fn((_input, opts?: { onSuccess?: () => void }) => opts?.onSuccess?.())
     useAddTransactionMock.mockReturnValue({ mutate, isPending: false })
-    const user = userEvent.setup()
+    // delay: null → userEvent resolves between actions on microtasks, not
+    // setTimeout, so a multi-step flow can't time out when the full suite's
+    // parallel workers starve the macrotask queue (a real cross-file flake).
+    const user = userEvent.setup({ delay: null })
 
     renderSheet()
 
@@ -178,7 +184,10 @@ describe('AddTransactionSheet', () => {
     const mutate = vi.fn((_input, opts?: { onError?: (err: Error) => void }) => opts?.onError?.(new Error('network down')))
     useAddTransactionMock.mockReturnValue({ mutate, isPending: false })
     const onClose = vi.fn()
-    const user = userEvent.setup()
+    // delay: null → userEvent resolves between actions on microtasks, not
+    // setTimeout, so a multi-step flow can't time out when the full suite's
+    // parallel workers starve the macrotask queue (a real cross-file flake).
+    const user = userEvent.setup({ delay: null })
 
     renderSheet(onClose)
 

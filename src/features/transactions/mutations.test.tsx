@@ -21,6 +21,7 @@ import {
   isOptimisticId,
   useAddTransaction,
   useDeleteTransaction,
+  useReconcileBalance,
   useReverseTransaction,
   useSaveParsedTransactions,
   useUpdateTransaction,
@@ -384,6 +385,66 @@ describe('useReverseTransaction — cancels the original (+ fee sibling) out', (
 
     expect(result.current.data).toEqual({ found: true, reversedCount: 2 })
     expect(calls.some((c) => c.method === 'delete')).toBe(true)
+  })
+})
+
+describe('useReconcileBalance — books ONE adjustment for the untracked gap', () => {
+  it('books an income adjustment when the reported balance is higher than tracked', async () => {
+    const { wrapper } = makeClientAndWrapper()
+    const calls: RecordedCall[] = []
+    mockSupabase.from
+      .mockImplementationOnce(() => chainable(ok({ balance_cents: 40000 }), (c) => calls.push(c))) // live balance read
+      .mockImplementationOnce(() => chainable(ok(null), (c) => calls.push(c))) // adjustment insert
+
+    const { result } = renderHook(() => useReconcileBalance(), { wrapper })
+    await waitForAuthReady()
+    await act(async () => {
+      result.current.mutate({ accountId: MPESA_ID, targetBalanceCents: 50000 })
+    })
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+
+    expect(result.current.data).toEqual({ adjusted: true, deltaCents: 10000 })
+    const insert = calls.find((c) => c.method === 'insert')
+    expect(insert?.args[0]).toMatchObject({
+      kind: 'income',
+      amount_cents: 10000,
+      account_id: MPESA_ID,
+      user_id: USER_ID,
+      note: 'Balance sync',
+    })
+  })
+
+  it('books an expense adjustment when the reported balance is lower than tracked', async () => {
+    const { wrapper } = makeClientAndWrapper()
+    const calls: RecordedCall[] = []
+    mockSupabase.from
+      .mockImplementationOnce(() => chainable(ok({ balance_cents: 50000 }), (c) => calls.push(c)))
+      .mockImplementationOnce(() => chainable(ok(null), (c) => calls.push(c)))
+
+    const { result } = renderHook(() => useReconcileBalance(), { wrapper })
+    await waitForAuthReady()
+    await act(async () => {
+      result.current.mutate({ accountId: MPESA_ID, targetBalanceCents: 47000 })
+    })
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+
+    expect(result.current.data).toEqual({ adjusted: true, deltaCents: -3000 })
+    expect(calls.find((c) => c.method === 'insert')?.args[0]).toMatchObject({ kind: 'expense', amount_cents: 3000 })
+  })
+
+  it('is a no-op (no insert) when the balance already matches', async () => {
+    const { wrapper } = makeClientAndWrapper()
+    mockSupabase.from.mockImplementationOnce(() => chainable(ok({ balance_cents: 50000 })))
+
+    const { result } = renderHook(() => useReconcileBalance(), { wrapper })
+    await waitForAuthReady()
+    await act(async () => {
+      result.current.mutate({ accountId: MPESA_ID, targetBalanceCents: 50000 })
+    })
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+
+    expect(result.current.data).toEqual({ adjusted: false, deltaCents: 0 })
+    expect(mockSupabase.from).toHaveBeenCalledTimes(1) // read only, no insert
   })
 })
 

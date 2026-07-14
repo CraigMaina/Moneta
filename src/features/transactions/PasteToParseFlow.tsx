@@ -13,7 +13,7 @@ import { CATEGORY_NAMES, normalizeMerchant, resolveMerchantCategory } from '../.
 import { INCOME_CATEGORY_NAMES, type CategoryName } from '../../parser/types'
 import { buildParsedRows } from './buildParsedRows'
 import { useMerchantRules, useSetMerchantRule } from './merchantMemory'
-import { useReverseTransaction, useSaveParsedTransactions } from './mutations'
+import { useReconcileBalance, useReverseTransaction, useSaveParsedTransactions } from './mutations'
 import { useAccounts, useCategories } from './queries'
 import { useParseMessage, type ParseOutcome } from './useParseMessage'
 
@@ -54,11 +54,13 @@ export function PasteToParseFlow({ onClose, onFallbackToManual, initialText }: P
   const parseMessage = useParseMessage()
   const saveParsed = useSaveParsedTransactions()
   const reverseTransaction = useReverseTransaction()
+  const reconcileBalance = useReconcileBalance()
   const setMerchantRule = useSetMerchantRule()
 
   const [outcome, setOutcome] = useState<ParseOutcome | null>(null)
   const [category, setCategory] = useState<CategoryName | null | undefined>(undefined)
   const [editingCategory, setEditingCategory] = useState(false)
+  const [syncRequested, setSyncRequested] = useState(false)
 
   const accountOptions = useMemo(() => toAccountOptions(accountsQuery.data ?? []), [accountsQuery.data])
   const categoryIdByName = useMemo(() => {
@@ -178,12 +180,28 @@ export function PasteToParseFlow({ onClose, onFallbackToManual, initialText }: P
           showToast({ title: 'Saved', variant: 'success' })
           rememberMerchantCorrection(edits)
         }
+        maybeSyncBalance()
         onClose()
       },
       onError: () => {
         showToast({ title: "Couldn't save that", description: 'Check your connection and try again.', variant: 'warn' })
       },
     })
+  }
+
+  // If the user armed "Sync balance", reconcile M-PESA to Safaricom's reported
+  // figure AFTER the parsed transaction is saved (so the sync accounts for it).
+  const mpesaAccountId = accountOptions.find((a) => a.type === 'mpesa')?.id ?? null
+  const maybeSyncBalance = () => {
+    if (!syncRequested || parsed.newBalanceCents === null || !mpesaAccountId) return
+    reconcileBalance.mutate(
+      { accountId: mpesaAccountId, targetBalanceCents: parsed.newBalanceCents },
+      {
+        onSuccess: ({ adjusted }) => {
+          if (adjusted) showToast({ title: 'M-PESA balance synced', variant: 'success' })
+        },
+      },
+    )
   }
 
   const rememberMerchantCorrection = (edits: ParseConfirmationEdits) => {
@@ -203,6 +221,18 @@ export function PasteToParseFlow({ onClose, onFallbackToManual, initialText }: P
         category={category}
         onConfirm={handleConfirm}
         onEditCategory={() => setEditingCategory(true)}
+        onSyncBalance={
+          parsed.newBalanceCents !== null && mpesaAccountId
+            ? () => {
+                setSyncRequested(true)
+                showToast({
+                  title: 'Balance will sync',
+                  description: "We'll match M-PESA to Safaricom's figure when you save.",
+                  variant: 'info',
+                })
+              }
+            : undefined
+        }
         onCancel={onClose}
         saving={saveParsed.isPending || reverseTransaction.isPending}
       />
