@@ -215,3 +215,24 @@ SUPABASE_DB_URL=… node supabase/tests/run-pgtap.mjs supabase/tests/database/pa
 **Assumptions recorded in DECISIONS.md:** the (functionally-no-op-today) partial-vs-plain unique index choice on `raw_sms_hash`; `resolved` has no automatic-flip mechanism yet; no service-role key used anywhere in this function; forced-tool-use over free-text-JSON-parsing for the Anthropic call; an Anthropic infra failure folds into the same `manual` 200 response as a validation failure (never a 5xx the client can't act on); the `deno.json` import-map trick that makes `schema.ts`/`prompt.ts` importable unmodified by both Deno and Vitest; the new `eslint.config.js` Deno-globals override; `rls.test.sql`'s extension.
 
 **Not committed** — left for the lead to review and commit, per brief instructions.
+
+## Phase 3 — M-PESA parser (paste → parse → confirm → save)
+
+**Committed (all green, `npm run check` = 45 files / 357 tests, verified deterministic across 3 full runs):**
+- `1671a34` parser core — 12 format families, data-driven `patterns.json`, pure offline extractors (float-free money, Nairobi-zone timestamps, merchant normalizer), 68-fixture corpus @ 100% field accuracy, fails closed to `unmatched`.
+- `0500332` `parsedToTransactions` mapper — 1-or-2 rows per message (withdrawal → transfer + fee, deposit, Fuliza directions, reversal), 54 tests incl. a balance-delta cross-check.
+- `2e5e4ba` `useSaveParsedTransactions` — batch save with `mpesa_ref` dedupe; full re-paste is a no-op (`duplicated: true`).
+- `7aeca08` `parse-sms` Edge Function (LLM fallback) + `parse_misses` table — JWT-derived user via anon-key client (no service-role key), fails closed to `manual`, deduped miss log; RLS + pgTAP.
+- `943a968` design UI — `ParseConfirmationCard`, `ParseTransform` (wow-moment animation + reduced-motion path), `PasteToParse`.
+- `915325e` `useParseMessage` (deterministic → Edge fallback) + merchant-memory hooks; **fixed a cross-file `matchMedia`/reduced-motion test flake** via a stable default in `src/test/setup.ts`.
+- `5bd232b` `PasteToParseFlow` + `buildParsedRows` wired into the Add sheet behind a "Type it / Paste M-PESA" toggle; merchant memory seeds + records category corrections; re-paste toasts "Already logged".
+
+**Deferred (surfaced, not faked — remaining Phase 3 work):**
+- Reversal auto-matching mutation (currently the card confirm toasts + closes for `family === 'reversal'`).
+- Balance-reconciliation `onSyncBalance` (the `newBalanceCents` affordance exists in the card; the sync mutation isn't wired).
+- Web Share Target service-worker POST→GET redirect so a shared SMS opens the Add sheet in paste mode with `initialSharedText` (the sheet prop + auto-parse are ready; the SW `fetch` handler is not).
+- Edge Function deploy + secret: `supabase functions deploy parse-sms`; `supabase secrets set ANTHROPIC_API_KEY=...`. `parse_misses` migration + `npm run test:rls` need running against the cloud DB.
+
+**Verification status:**
+- Live wow-moment walkthrough (paste → transform → confirm → save at 390×844) NOT yet done — browser automation hit repeated input-dispatch timeouts this session (app renders clean, zero console errors; not an app defect). Needs a manual pass.
+- qa-reviewer Phase 3 gate: PENDING (run after the deferred items land, or scope the gate to what's committed).
