@@ -265,3 +265,14 @@ User-requested batch (all app-layer; the DB already had `archived_at`, `icon`, a
 **Item 5 ("pasted M-PESA don't show in history") — resolved as not-a-bug.** Live DB inspection showed parsed rows DO persist and DO render (verified an existing sms_parse row under its day group); the user confirmed it's expected — parsed rows carry the SMS's own date, so an older transaction sorts down the list rather than at the top. No code change.
 
 **Env note:** browser automation this session hit intermittent CDP freezes/viewport reflow under machine load (8+ leftover Vite dev servers, since trimmed) — not an app defect; the app rendered clean each time it responded. Still pending a manual pass: the Phase 3 wow-moment walkthrough and the qa-reviewer gate.
+
+## Insights screen — F10 (lead)
+
+The Insights tab (previously a stub) is now a full screen, all from local data (offline-capable), typecheck + lint clean, **409 tests** (18 new). Verified live in dark mode with real data.
+
+- `features/insights/insightsMath.ts` — pure, exhaustively-tested aggregation (Nairobi months, transfers excluded): `monthInsights`, `monthlySeries`, `recentMonthKeys`, `withOtherBucket`, month labels.
+- Charts (inline SVG/CSS, no dep): `CategoryDonut` (tappable legend → drill-down), `MonthlyTrendChart` (in/out bars, tap = month nav), plus a cash-flow card and a Fees & Fuliza spotlight, all in `routes/Insights.tsx`.
+- Month navigation via the trend chart + ‹ › header; category drill-down opens a sheet listing that category's transactions for the month.
+- Loading/empty/error states on the screen; `chartPalette.ts` is a documented single-ramp exception to the no-per-category-hue rule.
+
+**Still stubbed:** Goals (F7). **Not started:** F1 onboarding, F6 recurring/reminders, F8 habits, F9 nudges, F11 app-lock/data-deletion, F12 offline queue, F13 CSV export, F5 statement import.
