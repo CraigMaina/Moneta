@@ -163,11 +163,11 @@ function BalanceCards() {
 
   if (isLoading) {
     return (
-      <div className="flex gap-3 overflow-x-auto pb-1">
+      <div className="grid grid-cols-3 gap-2">
         {[0, 1, 2].map((i) => (
           <div
             key={i}
-            className="h-[84px] w-36 flex-shrink-0 animate-pulse rounded-card bg-paper-50 motion-reduce:animate-none"
+            className="h-[68px] animate-pulse rounded-card bg-paper-50 motion-reduce:animate-none"
             aria-hidden="true"
           />
         ))}
@@ -191,17 +191,22 @@ function BalanceCards() {
     return <p className="text-[15px] text-ink-600">Your accounts will show up here once they&apos;re set up.</p>
   }
 
+  // A flexible 3-up grid: the three default accounts fit one row on any phone
+  // width (no horizontal scroll), and any extra accounts wrap to the next row.
   return (
-    <div className="flex gap-3 overflow-x-auto pb-1">
+    <div className="grid grid-cols-3 gap-2">
       {balances.map((balance) => (
-        <Card key={balance.account_id ?? balance.account_name} className="w-36 flex-shrink-0">
-          <p className="truncate text-[12.5px] font-semibold uppercase tracking-wide text-ink-600">
+        <div
+          key={balance.account_id ?? balance.account_name}
+          className="min-w-0 rounded-card bg-paper-0 p-3 shadow-card"
+        >
+          <p className="truncate text-[11px] font-semibold uppercase tracking-wide text-ink-600">
             {balance.account_name ?? 'Account'}
           </p>
           <p className="mt-1">
-            <AmountDisplay cents={balance.balance_cents ?? 0} size="title" />
+            <AmountDisplay cents={balance.balance_cents ?? 0} size="body" className="block truncate" />
           </p>
-        </Card>
+        </div>
       ))}
     </div>
   )
