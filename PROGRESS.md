@@ -356,3 +356,14 @@ Built on TanStack's pause/resume (optimistic mutations already in place). Typech
 - `useOnlineStatus` / `usePendingSyncCount` (via `onlineManager` + `useMutationState`, `useSyncExternalStore`); `OfflineBanner` slim fixed top banner wired into App.
 
 **Next (user batch):** F5 statement import.
+
+## Statement import — F5 (lead)
+
+Paste/upload an M-PESA statement, review parsed rows, batch-import with dedupe. Typecheck + lint clean, **467 tests** (6 new — statement parser). On-device parse in v1; Edge Function provided for the server path.
+
+- `features/import/statementParser.ts` — pure, fixture-tested (`__fixtures__/sample-statement.txt?raw`): parses the transaction table → candidates (paid-in=income, withdrawn=expense, Receipt No.=mpesa_ref, Nairobi times, integer-cents), skips non-completed/zero rows, best-effort merchant extraction.
+- `features/import/mutations.ts` — `useImportStatement`: non-optimistic deduped batch insert (source `statement_import`), invalidate on success.
+- `routes/StatementImport.tsx` — paste/upload → review (per-row select, duplicates flagged from cache & excluded) → account pick → import; empty/loading states. Route `/import`, entry in Settings → Data.
+- `supabase/functions/import-statement/` — Deno mirror of the parser (JWT-verified, parse-only), deploy-ready for PDF/heavier parsing.
+
+**All requested features (F1, F5, F6, F7, F8, F9, F10, F11, F12, F13) delivered.** Deferred/noted: Sunday Wrapped review + Web Push (F8), true auth-user deletion (F11), in-browser PDF extraction (F5).

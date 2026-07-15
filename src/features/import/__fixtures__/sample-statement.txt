@@ -1,0 +1,14 @@
+M-PESA Full Statement
+Customer Name: JANE WANJIKU
+Mobile Number: 2547XXXXX000
+Statement Period: 01 Jun 2026 - 30 Jun 2026
+
+Receipt No.   Completion Time   Details   Transaction Status   Paid In   Withdrawn   Balance
+SGH7XABC12 2026-06-01 08:12:33 Customer Transfer to 254712345678 - John Doe Completed 0.00 1,500.00 3,200.00
+SGH8YDEF34 2026-06-01 09:00:01 Pay Bill to KPLC Prepaid Acc. 8830012 Completed 0.00 1,050.00 2,150.00
+SGH9ZGHI56 2026-06-02 14:22:10 Funds received from 254722000000 - Jane Store Completed 5,000.00 0.00 7,150.00
+SGI0AJKL78 2026-06-02 14:25:00 Withdrawal Charge Completed 0.00 28.00 7,122.00
+SGI1BMNO90 2026-06-03 10:05:44 Merchant Payment to Naivas Supermarket Completed 0.00 2,340.50 4,781.50
+SGI2CPQR12 2026-06-04 18:30:00 Airtime Purchase Completed 0.00 100.00 4,681.50
+SGI3DSTU34 2026-06-05 07:00:00 Salary Payment from ACME LTD Failed 45,000.00 0.00 4,681.50
+SGI4EVWX56 2026-06-05 12:00:00 Balance Enquiry Completed 0.00 0.00 4,681.50

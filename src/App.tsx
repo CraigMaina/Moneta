@@ -6,6 +6,7 @@ import { Goals } from './routes/Goals'
 import { Insights } from './routes/Insights'
 import { Settings } from './routes/Settings'
 import { Recurring } from './routes/Recurring'
+import { StatementImport } from './routes/StatementImport'
 import { KitchenSink } from './routes/KitchenSink'
 import { ToastProvider } from './components/ui/Toast'
 import { OfflineBanner } from './features/offline/OfflineBanner'
@@ -36,6 +37,7 @@ export function App() {
                 <Route path="/insights" element={<Insights />} />
                 <Route path="/settings" element={<Settings />} />
                 <Route path="/recurring" element={<Recurring />} />
+                <Route path="/import" element={<StatementImport />} />
               </Routes>
               </OnboardingGate>
               </LockGate>

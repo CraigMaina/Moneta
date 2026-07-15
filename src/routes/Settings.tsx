@@ -66,7 +66,16 @@ export function Settings() {
         </Section>
 
         <Section title="Data">
-          <ExportData />
+          <div className="space-y-3">
+            <Card interactive onClick={() => navigate('/import')} className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-[15px] font-semibold text-ink-900">Import M-PESA statement</p>
+                <p className="mt-0.5 text-[12.5px] text-ink-600">Bring in past transactions from a statement</p>
+              </div>
+              <ChevronRightIcon className="h-5 w-5 flex-shrink-0 text-ink-600" />
+            </Card>
+            <ExportData />
+          </div>
         </Section>
 
         <Section title="Account">
