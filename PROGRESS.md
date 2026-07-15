@@ -276,3 +276,13 @@ The Insights tab (previously a stub) is now a full screen, all from local data (
 - Loading/empty/error states on the screen; `chartPalette.ts` is a documented single-ramp exception to the no-per-category-hue rule.
 
 **Still stubbed:** Goals (F7). **Not started:** F1 onboarding, F6 recurring/reminders, F8 habits, F9 nudges, F11 app-lock/data-deletion, F12 offline queue, F13 CSV export, F5 statement import.
+
+## Savings goals — F7 (lead)
+
+The Goals tab (previously a stub) is now a full screen. Schema already existed (goals + goal_contributions, full RLS) — no migration. Typecheck + lint clean, **420 tests** (11 new). Verified live (empty state + editor/keypad).
+
+- `features/goals/goalMath.ts` — pure, exhaustively-tested: saved-cents (derived), progress fraction, reached check, and trailing-30-day projected completion.
+- Data: `queries.ts` (useGoals, useGoalContributions), `mutations.ts` (create/update/delete goal + contribute; contribute stamps `achieved_at` once and reports `justReached`), `schemas.ts` (zod).
+- UI: `GoalCard` (progress ring + saved/target + projected line + Contribute), `GoalEditorSheet` (name + keypad target + date + emoji), `ContributeSheet` (keypad), `Confetti` (one-time, reduced-motion-safe), `routes/Goals.tsx` (list, empty/loading/error, delete-confirm, celebration).
+
+**Both stub tabs are now built (Insights F10, Goals F7).** Next up (user-requested batch, in order): F6 recurring/reminders, F1 onboarding, F8 habits, F9 nudges, F11 app-lock/delete, F13 CSV export, F12 offline queue, F5 statement import.

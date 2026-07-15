@@ -38,6 +38,14 @@ export const merchantRuleKeys = {
   all: (userId: string | undefined) => ['merchantRules', userId] as const,
 }
 
+export const goalKeys = {
+  all: (userId: string | undefined) => ['goals', userId] as const,
+}
+
+export const goalContributionKeys = {
+  all: (userId: string | undefined) => ['goalContributions', userId] as const,
+}
+
 export const recurringItemKeys = {
   upcomingBills: (userId: string | undefined, fromDate: string, toDate: string) =>
     ['recurringItems', userId, 'upcomingBills', fromDate, toDate] as const,

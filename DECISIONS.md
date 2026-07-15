@@ -307,3 +307,12 @@ Dev/tooling:
 - **The month is driven by the trend chart** — tapping a month bar (or the ‹ › nav) selects it; the chart doubles as the navigator, avoiding a separate month picker.
 - **Fees & Fuliza spotlight totals the "Fees & Fuliza charges" category**, which is exactly where the parser books fees (`buildParsedRows`), rather than summing `fee_cents` provenance (which would double-count against the separate fee expense rows).
 - **Donut folds the long tail into a non-drillable "Other" bucket** (max 5 visible slices) so it stays legible; real categories and the Uncategorized bucket drill into a per-category transaction list for the month.
+
+## Savings goals (F7)
+
+- **A goal's saved amount is derived from its contributions, never stored** — same rule as account balances. `goalSavedCents` sums `goal_contributions`; the UI joins goals + contributions rather than reading a running total.
+- **Contributions are tracked earmarks (`transaction_id = null`), not transactions** — for v1, contributing sets money aside without moving it between accounts, so it does NOT touch account balances or safe-to-spend. (The schema allows a linked transaction for a future "transfer into a goal account" flow; we don't use it yet.)
+- **`achieved_at` is stamped exactly once**, server-side inside the contribution mutation, the moment the derived total first reaches the target — so the confetti celebration fires once and never re-fires on later contributions. The mutation re-derives the total from the source of truth (not a cached number) to make that decision.
+- **Projected completion uses the trailing-30-day contribution rate** (`projectGoalCompletion`): `no-rate` when nothing was contributed in the window (we don't invent a date), else `remaining / (recent / 30)` days out. Pure and exhaustively tested.
+- **Deleting a goal is confirmed** (a two-button sheet), because it cascades its contributions — the one irreversible action in the feature, so it doesn't hide behind a single tap. Everything else is a plain toast.
+- **Celebration respects reduced motion** — the confetti burst becomes a single calm fade; `onDone` still fires so nothing gets stuck.
