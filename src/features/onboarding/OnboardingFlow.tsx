@@ -7,7 +7,7 @@ import { cn } from '../../lib/cn'
 import { formatKES, unitsToCents } from '../../lib/money'
 import { useCreateGoal } from '../goals/mutations'
 import { useCreateRecurringItem } from '../recurring/mutations'
-import { PasteToParseFlow } from '../transactions/PasteToParseFlow'
+import { StatementImportPanel } from '../import/StatementImportPanel'
 import { toNairobiDateString } from '../transactions/nairobiDate'
 import { useAccounts, useProfile } from '../transactions/queries'
 import { useUpdateProfile, withOnboardingComplete } from './profileMutations'
@@ -15,15 +15,16 @@ import { useUpdateProfile, withOnboardingComplete } from './profileMutations'
 /**
  * Onboarding (PRD F1: 90 seconds to value). A short, skippable flow that
  * collects the three inputs safe-to-spend needs to come alive — typical income,
- * fixed bills, one goal — then the paste wow-moment. The scaffolding (profile,
- * accounts, categories) already exists from the `handle_new_user` trigger, so
- * this only COLLECTS and writes, then stamps the onboarding-complete flag.
- * Every step is skippable; skipped inputs just aren't written (the app fills in
- * sensible defaults and Home prompts to complete them later).
+ * fixed bills, one goal — then a statement backfill so the user starts already
+ * up to date (real balances + safe-to-spend from day one). The scaffolding
+ * (profile, accounts, categories) already exists from the `handle_new_user`
+ * trigger, so this only COLLECTS and writes, then stamps the onboarding-complete
+ * flag. Every step is skippable; skipped inputs just aren't written (the app
+ * fills in sensible defaults and Home prompts to complete them later).
  */
 
-type Step = 'welcome' | 'income' | 'bills' | 'goal' | 'paste'
-const STEPS: Step[] = ['welcome', 'income', 'bills', 'goal', 'paste']
+type Step = 'welcome' | 'income' | 'bills' | 'goal' | 'statement'
+const STEPS: Step[] = ['welcome', 'income', 'bills', 'goal', 'statement']
 
 interface DraftBill {
   name: string
@@ -123,8 +124,8 @@ export function OnboardingFlow() {
               onNext={goNext}
             />
           )}
-          {step === 'paste' && (
-            <PasteStep onDone={() => void finish()} finishing={finishing} />
+          {step === 'statement' && (
+            <StatementStep onDone={() => void finish()} finishing={finishing} />
           )}
         </div>
       </div>
@@ -314,15 +315,18 @@ function GoalStep({
   )
 }
 
-function PasteStep({ onDone, finishing }: { onDone: () => void; finishing: boolean }) {
+function StatementStep({ onDone, finishing }: { onDone: () => void; finishing: boolean }) {
   return (
     <div className="flex h-full flex-col">
-      <StepHeading title="Add your first transaction" subtitle="Paste an M-PESA message and watch it turn into a logged transaction." />
+      <StepHeading
+        title="Start already up to date"
+        subtitle="Paste your M-PESA statement to bring in your recent transactions — so Moneta opens with your real balances and safe-to-spend. Optional; you can also do this later in Settings."
+      />
       <div className="flex-1">
-        <PasteToParseFlow onClose={onDone} onFallbackToManual={onDone} />
+        <StatementImportPanel importLabel="Import & finish" onImported={onDone} />
       </div>
       <Button variant="ghost" fullWidth onClick={onDone} loading={finishing} className="mt-4">
-        Finish
+        Skip for now
       </Button>
     </div>
   )

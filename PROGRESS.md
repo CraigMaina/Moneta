@@ -366,4 +366,8 @@ Paste/upload an M-PESA statement, review parsed rows, batch-import with dedupe. 
 - `routes/StatementImport.tsx` — paste/upload → review (per-row select, duplicates flagged from cache & excluded) → account pick → import; empty/loading states. Route `/import`, entry in Settings → Data.
 - `supabase/functions/import-statement/` — Deno mirror of the parser (JWT-verified, parse-only), deploy-ready for PDF/heavier parsing.
 
-**All requested features (F1, F5, F6, F7, F8, F9, F10, F11, F12, F13) delivered.** Deferred/noted: Sunday Wrapped review + Web Push (F8), true auth-user deletion (F11), in-browser PDF extraction (F5).
+### Statement import in onboarding (backfill)
+
+Extracted the parse/review/import into a shared `features/import/StatementImportPanel.tsx` (used by the `/import` route and onboarding). Onboarding's final step is now "Start already up to date" — paste a statement to import recent transactions so the app opens with real balances + safe-to-spend (replaces the single-message paste step; still skippable). Panel shows a money-in/out summary. Typecheck + lint clean, **467 tests**.
+
+**All requested features (F1, F5, F6, F7, F8, F9, F10, F11, F12, F13) delivered.** Deferred/noted: Sunday Wrapped review + Web Push (F8), true auth-user deletion (F11), in-browser PDF extraction (F5 — v1 takes pasted/uploaded statement text; parser is extraction-agnostic).
