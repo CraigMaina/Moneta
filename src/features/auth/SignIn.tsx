@@ -18,6 +18,18 @@ import { useToast } from '../../components/ui/Toast'
  */
 type Mode = 'signin' | 'signup' | 'reset'
 
+/**
+ * A readable description for an auth error. A gateway timeout (504, common when
+ * a custom SMTP server can't be reached) comes back with an empty message, so
+ * fall back to a plain, non-technical line instead of showing "{}".
+ */
+function errorDetail(error: { message?: string; status?: number }): string {
+  const message = error.message?.trim()
+  if (message) return message
+  if (error.status === 504) return 'The server timed out (this is usually the email settings). Try again shortly.'
+  return 'Something went wrong. Please try again.'
+}
+
 export function SignIn() {
   const { showToast } = useToast()
   const [mode, setMode] = useState<Mode>('signin')
@@ -55,7 +67,7 @@ export function SignIn() {
       })
       setSubmitting(false)
       if (error) {
-        showToast({ title: "Couldn't send the reset email", description: error.message, variant: 'warn' })
+        showToast({ title: "Couldn't send the reset email", description: errorDetail(error), variant: 'warn' })
         return
       }
       showToast({ title: 'Check your email', description: 'We sent a link to reset your password.', variant: 'success' })
@@ -79,7 +91,7 @@ export function SignIn() {
         const already = /already registered|already exists/i.test(error.message)
         showToast({
           title: already ? 'That email already has an account' : "Couldn't create your account",
-          description: already ? 'Try signing in instead.' : error.message,
+          description: already ? 'Try signing in instead.' : errorDetail(error),
           variant: 'warn',
         })
         if (already) switchMode('signin')
@@ -104,7 +116,7 @@ export function SignIn() {
       const badCreds = /invalid login credentials/i.test(error.message)
       showToast({
         title: badCreds ? 'Email or password is incorrect' : "Couldn't sign you in",
-        description: badCreds ? 'Check them and try again.' : error.message,
+        description: badCreds ? 'Check them and try again.' : errorDetail(error),
         variant: 'warn',
       })
     }
