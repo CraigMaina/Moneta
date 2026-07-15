@@ -9,12 +9,12 @@ import { useToast } from '../../components/ui/Toast'
  * earlier magic-link / OTP flow) so signing in sends no email and never hits
  * the email rate limit.
  *
- * `signInWithPassword` logs an existing user in; `signUp` creates one;
- * `resetPasswordForEmail` mails a recovery link that lands back on the app,
- * where `UpdatePassword` sets the new password. If the Supabase project has
- * "Confirm email" enabled, `signUp` returns a user with no session (a
- * confirmation email is sent) and we tell the user to confirm; if disabled,
- * `signUp` returns a session and `onAuthStateChange` signs them straight in.
+ * `signInWithPassword` logs an existing user in; `signUp` creates one (with a
+ * retyped-password confirm); `resetPasswordForEmail` mails a recovery link that
+ * lands back on the app, where `UpdatePassword` sets the new password. If the
+ * Supabase project has "Confirm email" enabled, `signUp` returns a user with no
+ * session (a confirmation email is sent) and we tell the user to confirm; if
+ * disabled, `signUp` returns a session and `onAuthStateChange` signs them in.
  */
 type Mode = 'signin' | 'signup' | 'reset'
 
@@ -23,13 +23,26 @@ export function SignIn() {
   const [mode, setMode] = useState<Mode>('signin')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [submitting, setSubmitting] = useState(false)
 
   const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())
-  // Supabase requires 6+; ask for 8+ on new accounts, accept any non-empty on sign-in.
-  const passwordValid = mode === 'signup' ? password.length >= 8 : password.length >= 1
-  const canSubmit = mode === 'reset' ? emailValid && !submitting : emailValid && passwordValid && !submitting
+  const passwordsMatch = password === confirmPassword
+  // Supabase requires 6+; ask for 8+ (and a matching retype) on new accounts.
+  const canSubmit =
+    !submitting &&
+    (mode === 'reset'
+      ? emailValid
+      : mode === 'signup'
+        ? emailValid && password.length >= 8 && passwordsMatch
+        : emailValid && password.length >= 1)
+
+  const switchMode = (next: Mode) => {
+    setMode(next)
+    setPassword('')
+    setConfirmPassword('')
+  }
 
   async function submit() {
     if (!canSubmit) return
@@ -45,12 +58,8 @@ export function SignIn() {
         showToast({ title: "Couldn't send the reset email", description: error.message, variant: 'warn' })
         return
       }
-      showToast({
-        title: 'Check your email',
-        description: 'We sent a link to reset your password.',
-        variant: 'success',
-      })
-      setMode('signin')
+      showToast({ title: 'Check your email', description: 'We sent a link to reset your password.', variant: 'success' })
+      switchMode('signin')
       return
     }
 
@@ -66,7 +75,7 @@ export function SignIn() {
           description: already ? 'Try signing in instead.' : error.message,
           variant: 'warn',
         })
-        if (already) setMode('signin')
+        if (already) switchMode('signin')
         return
       }
       // Session present = confirmation is off, onAuthStateChange takes over.
@@ -77,8 +86,7 @@ export function SignIn() {
           description: 'Check your email to confirm, then sign in.',
           variant: 'success',
         })
-        setMode('signin')
-        setPassword('')
+        switchMode('signin')
       }
       return
     }
@@ -97,6 +105,7 @@ export function SignIn() {
   }
 
   const submitLabel = mode === 'signup' ? 'Create account' : mode === 'reset' ? 'Send reset link' : 'Sign in'
+  const showMismatch = mode === 'signup' && confirmPassword.length > 0 && !passwordsMatch
 
   return (
     <main className="flex min-h-dvh flex-col items-center justify-center bg-paper-0 px-6">
@@ -126,20 +135,9 @@ export function SignIn() {
 
           {mode !== 'reset' && (
             <>
-              <div className="mt-4 flex items-baseline justify-between">
-                <label htmlFor="signin-password" className="block text-[12.5px] font-semibold uppercase tracking-wide text-ink-600">
-                  Password
-                </label>
-                {mode === 'signin' && (
-                  <button
-                    type="button"
-                    onClick={() => setMode('reset')}
-                    className="text-[12.5px] font-semibold text-coral-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral-600"
-                  >
-                    Forgot password?
-                  </button>
-                )}
-              </div>
+              <label htmlFor="signin-password" className="mt-4 block text-[12.5px] font-semibold uppercase tracking-wide text-ink-600">
+                Password
+              </label>
               <div className="relative mt-2">
                 <input
                   id="signin-password"
@@ -165,6 +163,27 @@ export function SignIn() {
             </>
           )}
 
+          {mode === 'signup' && (
+            <>
+              <label htmlFor="signin-confirm" className="mt-4 block text-[12.5px] font-semibold uppercase tracking-wide text-ink-600">
+                Confirm password
+              </label>
+              <input
+                id="signin-confirm"
+                type={showPassword ? 'text' : 'password'}
+                autoComplete="new-password"
+                value={confirmPassword}
+                onChange={(event) => setConfirmPassword(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') submit()
+                }}
+                placeholder="Retype your password"
+                className="mt-2 h-12 w-full rounded-card bg-paper-50 px-4 text-[15px] text-ink-900 placeholder:text-ink-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral-600"
+              />
+              {showMismatch && <p className="mt-2 text-[12.5px] text-coral-600">Passwords don&apos;t match.</p>}
+            </>
+          )}
+
           <Button
             variant="primary"
             size="lg"
@@ -177,26 +196,35 @@ export function SignIn() {
             {submitLabel}
           </Button>
 
+          {mode === 'signin' && (
+            <p className="mt-4 text-center">
+              <button
+                type="button"
+                onClick={() => switchMode('reset')}
+                className="text-[13px] font-semibold text-coral-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral-600"
+              >
+                Forgot password?
+              </button>
+            </p>
+          )}
+
           {mode === 'reset' ? (
             <p className="mt-4 text-center text-[13px] text-ink-600">
               Remembered it?{' '}
               <button
                 type="button"
-                onClick={() => setMode('signin')}
+                onClick={() => switchMode('signin')}
                 className="font-semibold text-coral-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral-600"
               >
                 Back to sign in
               </button>
             </p>
           ) : (
-            <p className="mt-4 text-center text-[13px] text-ink-600">
+            <p className={`${mode === 'signin' ? 'mt-2' : 'mt-4'} text-center text-[13px] text-ink-600`}>
               {mode === 'signup' ? 'Already have an account?' : 'New to Moneta?'}{' '}
               <button
                 type="button"
-                onClick={() => {
-                  setMode(mode === 'signup' ? 'signin' : 'signup')
-                  setPassword('')
-                }}
+                onClick={() => switchMode(mode === 'signup' ? 'signin' : 'signup')}
                 className="font-semibold text-coral-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral-600"
               >
                 {mode === 'signup' ? 'Sign in' : 'Create an account'}

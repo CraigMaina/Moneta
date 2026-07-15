@@ -60,12 +60,29 @@ describe('SignIn', () => {
     await user.click(screen.getByRole('button', { name: 'Create an account' }))
     await user.type(screen.getByLabelText('Email'), 'kev@example.com')
     await user.type(screen.getByLabelText('Password'), 'longenoughpw')
+    await user.type(screen.getByLabelText('Confirm password'), 'longenoughpw')
     await user.click(screen.getByRole('button', { name: 'Create account' }))
 
     expect(mockSupabase.auth.signUp).toHaveBeenCalledWith({
       email: 'kev@example.com',
       password: 'longenoughpw',
     })
+  })
+
+  it('keeps create-account disabled until the retyped password matches', async () => {
+    const user = userEvent.setup()
+    renderSignIn()
+
+    await user.click(screen.getByRole('button', { name: 'Create an account' }))
+    await user.type(screen.getByLabelText('Email'), 'kev@example.com')
+    await user.type(screen.getByLabelText('Password'), 'longenoughpw')
+    await user.type(screen.getByLabelText('Confirm password'), 'longenoughpX')
+    expect(screen.getByRole('button', { name: 'Create account' })).toBeDisabled()
+
+    // Fix the mismatch and it enables.
+    await user.clear(screen.getByLabelText('Confirm password'))
+    await user.type(screen.getByLabelText('Confirm password'), 'longenoughpw')
+    expect(screen.getByRole('button', { name: 'Create account' })).toBeEnabled()
   })
 
   it('requires at least 8 characters to create an account', async () => {
