@@ -72,6 +72,24 @@ describe('SignIn', () => {
     )
   })
 
+  it('detects an already-registered email on sign-up (empty identities) and points to sign in', async () => {
+    const user = userEvent.setup()
+    // Supabase returns success with an obfuscated user (no identities) and no session.
+    mockSupabase.auth.signUp.mockResolvedValue({
+      data: { session: null, user: { identities: [] } },
+      error: null,
+    })
+    renderSignIn()
+
+    await user.click(screen.getByRole('button', { name: 'Create an account' }))
+    await user.type(screen.getByLabelText('Email'), 'taken@example.com')
+    await user.type(screen.getByLabelText('Password'), 'longenoughpw')
+    await user.type(screen.getByLabelText('Confirm password'), 'longenoughpw')
+    await user.click(screen.getByRole('button', { name: 'Create account' }))
+
+    expect(await screen.findByText('That email already has an account')).toBeInTheDocument()
+  })
+
   it('keeps create-account disabled until the retyped password matches', async () => {
     const user = userEvent.setup()
     renderSignIn()

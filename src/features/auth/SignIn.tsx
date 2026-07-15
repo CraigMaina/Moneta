@@ -98,13 +98,26 @@ export function SignIn() {
         return
       }
       // Session present = confirmation is off, onAuthStateChange takes over.
-      // No session = a confirmation email was sent; nudge the user to confirm.
       if (!data.session) {
-        showToast({
-          title: 'Account created',
-          description: 'Check your email to confirm, then sign in.',
-          variant: 'success',
-        })
+        // Supabase hides whether an email is already registered: signing up an
+        // existing address returns a success with an obfuscated user whose
+        // `identities` array is empty (and sends no email). Detect that so we
+        // point the user to sign in instead of telling them to check an inbox
+        // that will never get a message.
+        const alreadyExists = Array.isArray(data.user?.identities) && data.user.identities.length === 0
+        if (alreadyExists) {
+          showToast({
+            title: 'That email already has an account',
+            description: 'Try signing in, or reset your password.',
+            variant: 'warn',
+          })
+        } else {
+          showToast({
+            title: 'Account created',
+            description: 'Check your email to confirm, then sign in.',
+            variant: 'success',
+          })
+        }
         switchMode('signin')
       }
       return
