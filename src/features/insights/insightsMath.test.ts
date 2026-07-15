@@ -7,7 +7,12 @@ import {
   monthKeyShortLabel,
   monthlySeries,
   nairobiMonthKey,
+  nairobiWeekKey,
   recentMonthKeys,
+  recentWeekKeys,
+  weekInsights,
+  weekKeyLabel,
+  weeklySeries,
   withOtherBucket,
 } from './insightsMath'
 
@@ -137,5 +142,57 @@ describe('month labels', () => {
   it('formats long and short month labels', () => {
     expect(monthKeyLabel('2026-07')).toBe('July 2026')
     expect(monthKeyShortLabel('2026-07')).toBe('Jul')
+  })
+})
+
+describe('nairobiWeekKey', () => {
+  it('buckets by the Monday of the Nairobi week', () => {
+    // 2026-07-10 is a Friday → its week starts Monday 2026-07-06.
+    expect(nairobiWeekKey('2026-07-10T09:00:00.000Z')).toBe('2026-07-06')
+  })
+
+  it('uses the Nairobi calendar day, not UTC, at the week edge', () => {
+    // 2026-07-05 22:30 UTC is Mon 2026-07-06 01:30 in Nairobi → week of 07-06,
+    // not the previous week it would fall in by UTC.
+    expect(nairobiWeekKey('2026-07-05T22:30:00.000Z')).toBe('2026-07-06')
+  })
+})
+
+describe('recentWeekKeys', () => {
+  it('returns N Monday-start weeks oldest-first, including the current one', () => {
+    // 2026-07-15 is a Wednesday → week of Mon 2026-07-13.
+    expect(recentWeekKeys(new Date('2026-07-15T09:00:00.000Z'), 3)).toEqual([
+      '2026-06-29',
+      '2026-07-06',
+      '2026-07-13',
+    ])
+  })
+})
+
+describe('weekInsights & weeklySeries', () => {
+  it('aggregates only the transactions inside the week, excluding transfers', () => {
+    const txns = [
+      txn({ kind: 'expense', amount_cents: 1000, occurred_at: '2026-07-06T06:00:00.000Z' }),
+      txn({ kind: 'income', amount_cents: 5000, occurred_at: '2026-07-12T20:00:00.000Z' }),
+      txn({ kind: 'transfer', amount_cents: 9999, occurred_at: '2026-07-08T06:00:00.000Z' }),
+      txn({ kind: 'expense', amount_cents: 400, occurred_at: '2026-07-15T06:00:00.000Z' }), // next week
+    ]
+    const wk = weekInsights(txns, '2026-07-06')
+    expect(wk.expenseCents).toBe(1000)
+    expect(wk.incomeCents).toBe(5000)
+    expect(wk.netCents).toBe(4000)
+
+    const series = weeklySeries(txns, ['2026-07-06', '2026-07-13'])
+    expect(series).toEqual([
+      { monthKey: '2026-07-06', incomeCents: 5000, expenseCents: 1000 },
+      { monthKey: '2026-07-13', incomeCents: 0, expenseCents: 400 },
+    ])
+  })
+})
+
+describe('week labels', () => {
+  it('formats same-month and cross-month week labels', () => {
+    expect(weekKeyLabel('2026-07-06')).toBe('6–12 Jul')
+    expect(weekKeyLabel('2026-06-29')).toBe('29 Jun – 5 Jul')
   })
 })

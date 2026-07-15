@@ -44,13 +44,22 @@ export function Settings() {
         </Section>
 
         <Section title="Money">
-          <Card interactive onClick={() => navigate('/recurring')} className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-[15px] font-semibold text-ink-900">Recurring &amp; bills</p>
-              <p className="mt-0.5 text-[12.5px] text-ink-600">Rent, subscriptions, regular income</p>
-            </div>
-            <ChevronRightIcon className="h-5 w-5 flex-shrink-0 text-ink-600" />
-          </Card>
+          <div className="space-y-3">
+            <Card interactive onClick={() => navigate('/recurring')} className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-[15px] font-semibold text-ink-900">Recurring &amp; bills</p>
+                <p className="mt-0.5 text-[12.5px] text-ink-600">Rent, subscriptions, regular income</p>
+              </div>
+              <ChevronRightIcon className="h-5 w-5 flex-shrink-0 text-ink-600" />
+            </Card>
+            <Card interactive onClick={() => navigate('/budgets')} className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-[15px] font-semibold text-ink-900">Budgets</p>
+                <p className="mt-0.5 text-[12.5px] text-ink-600">Set a monthly cap per category</p>
+              </div>
+              <ChevronRightIcon className="h-5 w-5 flex-shrink-0 text-ink-600" />
+            </Card>
+          </div>
         </Section>
 
         <Section title="Accounts">

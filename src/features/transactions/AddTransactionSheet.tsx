@@ -383,7 +383,7 @@ function AccountSection({
       ) : accounts.length === 0 ? (
         <p className="mt-2 text-[15px] text-ink-600">No other account to transfer to yet.</p>
       ) : (
-        <div className="mt-2 flex gap-2 overflow-x-auto pb-1">
+        <div className="mt-2 flex flex-wrap gap-2">
           {accounts.map((account) => (
             <CategoryChip
               key={account.id}

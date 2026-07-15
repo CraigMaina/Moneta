@@ -23,6 +23,19 @@ export interface ImportStatementResult {
   duplicates: number
 }
 
+// A full statement can be thousands of rows. PostgREST filters ride in the URL,
+// so a single `.in(...)` of every ref would overflow it; and one giant insert
+// can time out. Both are chunked.
+const CHUNK_SIZE = 200
+
+function chunk<T>(items: T[], size: number): T[][] {
+  const chunks: T[][] = []
+  for (let i = 0; i < items.length; i += size) {
+    chunks.push(items.slice(i, i + size))
+  }
+  return chunks
+}
+
 export function useImportStatement() {
   const queryClient = useQueryClient()
   const userId = useAuthUserId()
@@ -46,22 +59,24 @@ export function useImportStatement() {
       )
 
       const refs = rows.map((row) => row.mpesa_ref).filter((ref): ref is string => Boolean(ref))
-      let existingRefs = new Set<string>()
-      if (refs.length > 0) {
+      const existingRefs = new Set<string>()
+      for (const refChunk of chunk(refs, CHUNK_SIZE)) {
         const { data: existing, error: readError } = await supabase
           .from('transactions')
           .select('mpesa_ref')
           .eq('user_id', userId)
-          .in('mpesa_ref', refs)
+          .in('mpesa_ref', refChunk)
         if (readError) throw readError
-        existingRefs = new Set((existing ?? []).map((row) => row.mpesa_ref).filter((ref): ref is string => Boolean(ref)))
+        for (const row of existing ?? []) {
+          if (row.mpesa_ref) existingRefs.add(row.mpesa_ref)
+        }
       }
 
       const newRows = rows.filter((row) => !row.mpesa_ref || !existingRefs.has(row.mpesa_ref))
       const duplicates = rows.length - newRows.length
 
-      if (newRows.length > 0) {
-        const { error } = await supabase.from('transactions').insert(newRows.map((row) => ({ ...row, user_id: userId })))
+      for (const rowChunk of chunk(newRows, CHUNK_SIZE)) {
+        const { error } = await supabase.from('transactions').insert(rowChunk.map((row) => ({ ...row, user_id: userId })))
         if (error) throw error
       }
 

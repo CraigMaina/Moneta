@@ -1,0 +1,32 @@
+M-PESA STATEMENT
+Customer Name: TEST USER
+Mobile Number: 2547XXXXX000
+Statement Period: 01 Jul 2026 - 15 Jul 2026
+DETAILED STATEMENT
+Page 1 of 2
+Receipt No. Completion Time Details Transaction Status Paid In Withdrawn Balance
+UGF1XBK0N2 2026-07-15 13:09:42 OverDraft of Credit Party Completed 235.00 0.00
+UGF1XBK0M2 2026-07-15 13:09:42 Merchant Payment Fuliza M-Pesa Completed -235.00 0.00
+Online to 515026 - Naivas West
+End Plaza
+UGF3XBKC5N 2026-07-15 06:43:15 Funds received from - Completed 312.00 312.00
+0790***642 Linnet Mwangi
+UGE1XBI19M 2026-07-14 20:04:23 OverDraft of Credit Party Completed 307.00 307.00
+UGE1XBI19M 2026-07-14 20:04:23 Customer Transfer of Funds Charge Completed -7.00 0.00
+UGE1XBI19M 2026-07-14 20:04:23 Customer Transfer Fuliza MPesa to Completed -300.00 0.00
+254717***548 KEFA MAISO
+UGE1XBI20A 2026-07-14 09:16:11 Salary Payment from 504900 - Failed 9836.00 0.00
+NCBA BANK via API
+UG31XA6YVE 2026-07-03 12:33:48 Pay Bill Online to 100205 - CUEA Completed -5,000.00 8,261.85
+Acc. 1048076
+Disclaimer: Any personal information shared with you should be handled in accordance with the Data Protection Act and only used for the purpose
+for which it was provided.
+Statement Verification Code To verify the validity of this M-PESA statement dial *334#, select My account and follow the
+prompts to enter the code.
+E7HVEHNM
+For self-help dial *234# | Web: www.safaricom.co.ke | Terms and
+conditions apply
+Page 2 of 2
+Receipt No. Completion Time Details Transaction Status Paid In Withdrawn Balance
+UGA1XB2URQ 2026-07-01 23:01:37 Customer Transfer to - Completed -660.00 389.18
+0714***590 Andrew Mulupi

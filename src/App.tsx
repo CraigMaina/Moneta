@@ -6,6 +6,7 @@ import { Goals } from './routes/Goals'
 import { Insights } from './routes/Insights'
 import { Settings } from './routes/Settings'
 import { Recurring } from './routes/Recurring'
+import { Budgets } from './routes/Budgets'
 import { StatementImport } from './routes/StatementImport'
 import { KitchenSink } from './routes/KitchenSink'
 import { ToastProvider } from './components/ui/Toast'
@@ -37,6 +38,7 @@ export function App() {
                 <Route path="/insights" element={<Insights />} />
                 <Route path="/settings" element={<Settings />} />
                 <Route path="/recurring" element={<Recurring />} />
+                <Route path="/budgets" element={<Budgets />} />
                 <Route path="/import" element={<StatementImport />} />
               </Routes>
               </OnboardingGate>

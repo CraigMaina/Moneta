@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react'
-import { TZDate } from '@date-fns/tz'
 import { AmountDisplay } from '../components/ui/AmountDisplay'
 import { Button } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
@@ -14,16 +13,21 @@ import { useCategories, useTransactions } from '../features/transactions/queries
 import type { Category, Transaction } from '../features/transactions/types'
 import { CategoryDonut, type DonutSlice } from '../features/insights/CategoryDonut'
 import { MonthlyTrendChart } from '../features/insights/MonthlyTrendChart'
+import { BudgetsCard } from '../features/budgets/BudgetsCard'
 import {
   OTHER_SLICE_ID,
-  monthInsights,
-  monthKeyLabel,
-  monthlySeries,
-  nairobiMonthKey,
-  recentMonthKeys,
+  nairobiPeriodKey,
+  periodInsights,
+  periodKeyLabel,
+  periodKeyShortLabel,
+  periodSeriesFor,
+  periodStartDate,
+  recentPeriodKeys,
   withOtherBucket,
+  type Granularity,
+  type MonthInsights,
+  type MonthTotals,
 } from '../features/insights/insightsMath'
-import { NAIROBI_TZ } from '../lib/safeToSpend'
 import { cn } from '../lib/cn'
 import { useUiStore } from '../store/uiStore'
 
@@ -33,18 +37,11 @@ import { useUiStore } from '../store/uiStore'
  * The month shown is driven by the trend chart (tap a month) and the ‹ › nav.
  */
 
-const MONTH_WINDOW = 6
+// How many periods the trend chart / navigator spans, per grain.
+const PERIOD_WINDOW: Record<Granularity, number> = { month: 6, week: 8 }
 // The category the parser books M-PESA/Fuliza fees to (see buildParsedRows).
 const FEE_CATEGORY_NAME = 'Fees & Fuliza charges'
 const UNCATEGORIZED_ID = '__uncategorized__'
-
-/** First instant of a `yyyy-MM` month, in Africa/Nairobi (for the query lower bound). */
-function monthStartDate(monthKey: string): Date {
-  const parts = monthKey.split('-')
-  const year = Number(parts[0])
-  const month = Number(parts[1])
-  return new TZDate(year, month - 1, 1, 0, 0, 0, 0, NAIROBI_TZ)
-}
 
 export function Insights() {
   const activeSheet = useUiStore((s) => s.activeSheet)
@@ -53,13 +50,22 @@ export function Insights() {
   const openAddSheet = () => openSheet('add')
 
   const now = useMemo(() => new Date(), [])
-  const months = useMemo(() => recentMonthKeys(now, MONTH_WINDOW), [now])
-  const currentMonth = nairobiMonthKey(now.toISOString())
-  const [selectedMonth, setSelectedMonth] = useState(currentMonth)
+  const [granularity, setGranularity] = useState<Granularity>('month')
+  const periods = useMemo(() => recentPeriodKeys(now, PERIOD_WINDOW[granularity], granularity), [now, granularity])
+  const currentPeriod = nairobiPeriodKey(now.toISOString(), granularity)
+  const [selectedPeriod, setSelectedPeriod] = useState(currentPeriod)
   // 'closed' = sheet shut; otherwise the drilled category id (or null = uncategorized).
   const [drillCategoryId, setDrillCategoryId] = useState<string | null | 'closed'>('closed')
 
-  const from = useMemo(() => monthStartDate(months[0] ?? currentMonth), [months, currentMonth])
+  // Switching grain re-keys everything (yyyy-MM vs yyyy-MM-dd), so land on the
+  // current period of the new grain instead of keeping a now-invalid key.
+  const changeGranularity = (next: Granularity) => {
+    setGranularity(next)
+    setSelectedPeriod(nairobiPeriodKey(now.toISOString(), next))
+    setDrillCategoryId('closed')
+  }
+
+  const from = useMemo(() => periodStartDate(periods[0] ?? currentPeriod, granularity), [periods, currentPeriod, granularity])
   const transactionsQuery = useTransactions({ from })
   const categoriesQuery = useCategories()
 
@@ -75,15 +81,16 @@ export function Insights() {
     [categories],
   )
 
-  const monthData = useMemo(
-    () => monthInsights(txns, selectedMonth, { feeCategoryId }),
-    [txns, selectedMonth, feeCategoryId],
+  const periodData = useMemo(
+    () => periodInsights(txns, selectedPeriod, granularity, { feeCategoryId }),
+    [txns, selectedPeriod, granularity, feeCategoryId],
   )
-  const series = useMemo(() => monthlySeries(txns, months), [txns, months])
+  const series = useMemo(() => periodSeriesFor(txns, periods, granularity), [txns, periods, granularity])
+  const labelFor = useMemo(() => (key: string) => periodKeyShortLabel(key, granularity), [granularity])
 
   const donutSlices: DonutSlice[] = useMemo(
     () =>
-      withOtherBucket(monthData.byCategory, 5).map((slice) => {
+      withOtherBucket(periodData.byCategory, 5).map((slice) => {
         if (slice.categoryId === OTHER_SLICE_ID) {
           return { id: OTHER_SLICE_ID, label: 'Other', amountCents: slice.amountCents }
         }
@@ -98,17 +105,17 @@ export function Insights() {
           icon: category ? categoryIcon(category) : undefined,
         }
       }),
-    [monthData.byCategory, categoryById],
+    [periodData.byCategory, categoryById],
   )
 
-  const selectedIndex = months.indexOf(selectedMonth)
+  const selectedIndex = periods.indexOf(selectedPeriod)
   const goPrev = () => {
-    const prev = months[selectedIndex - 1]
-    if (prev) setSelectedMonth(prev)
+    const prev = periods[selectedIndex - 1]
+    if (prev) setSelectedPeriod(prev)
   }
   const goNext = () => {
-    const next = months[selectedIndex + 1]
-    if (next) setSelectedMonth(next)
+    const next = periods[selectedIndex + 1]
+    if (next) setSelectedPeriod(next)
   }
 
   const openDrill = (sliceId: string) => {
@@ -121,31 +128,37 @@ export function Insights() {
     return txns.filter(
       (t) =>
         t.kind === 'expense' &&
-        nairobiMonthKey(t.occurred_at) === selectedMonth &&
+        nairobiPeriodKey(t.occurred_at, granularity) === selectedPeriod &&
         (t.category_id ?? null) === drillCategoryId,
     )
-  }, [txns, drillCategoryId, selectedMonth])
+  }, [txns, drillCategoryId, selectedPeriod, granularity])
 
   return (
     <main className="min-h-dvh bg-paper-0 pb-28">
       <div className="mx-auto max-w-md px-4 pt-[calc(env(safe-area-inset-top)+24px)]">
-        <h1 className="font-display text-[22px] font-semibold text-ink-900">Insights</h1>
+        <div className="flex items-center justify-between gap-3">
+          <h1 className="font-display text-[22px] font-semibold text-ink-900">Insights</h1>
+          <GranularityToggle value={granularity} onChange={changeGranularity} />
+        </div>
 
         <MonthNav
-          label={monthKeyLabel(selectedMonth)}
+          label={periodKeyLabel(selectedPeriod, granularity)}
           onPrev={goPrev}
           onNext={goNext}
           canPrev={selectedIndex > 0}
-          canNext={selectedIndex < months.length - 1}
+          canNext={selectedIndex < periods.length - 1}
         />
 
         <InsightsBody
           query={transactionsQuery}
           hasAnyData={txns.length > 0}
-          monthData={monthData}
+          monthData={periodData}
           series={series}
-          selectedMonth={selectedMonth}
-          onSelectMonth={setSelectedMonth}
+          selectedMonth={selectedPeriod}
+          onSelectMonth={setSelectedPeriod}
+          labelFor={labelFor}
+          granularity={granularity}
+          categoryById={categoryById}
           donutSlices={donutSlices}
           onDrill={openDrill}
           onAdd={openAddSheet}
@@ -159,7 +172,7 @@ export function Insights() {
         open={drillCategoryId !== 'closed'}
         onClose={() => setDrillCategoryId('closed')}
         title={drillCategory?.name ?? (drillCategoryId === null ? 'Uncategorized' : 'Category')}
-        monthLabel={monthKeyLabel(selectedMonth)}
+        monthLabel={periodKeyLabel(selectedPeriod, granularity)}
         transactions={drillTransactions}
       />
     </main>
@@ -194,7 +207,7 @@ function NavArrow({ direction, onClick, disabled }: { direction: 'prev' | 'next'
       type="button"
       onClick={onClick}
       disabled={disabled}
-      aria-label={direction === 'prev' ? 'Previous month' : 'Next month'}
+      aria-label={direction === 'prev' ? 'Previous period' : 'Next period'}
       className="flex h-10 w-10 items-center justify-center rounded-full text-ink-600 hover:bg-paper-50 hover:text-ink-900 disabled:opacity-30 disabled:hover:bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral-600"
     >
       <ChevronRightIcon className={cn('h-5 w-5', direction === 'prev' && 'rotate-180')} />
@@ -205,10 +218,13 @@ function NavArrow({ direction, onClick, disabled }: { direction: 'prev' | 'next'
 interface InsightsBodyProps {
   query: { isPending: boolean; isError: boolean; refetch: () => void }
   hasAnyData: boolean
-  monthData: ReturnType<typeof monthInsights>
-  series: ReturnType<typeof monthlySeries>
+  monthData: MonthInsights
+  series: MonthTotals[]
   selectedMonth: string
   onSelectMonth: (monthKey: string) => void
+  labelFor: (periodKey: string) => string
+  granularity: Granularity
+  categoryById: Map<string, Category>
   donutSlices: DonutSlice[]
   onDrill: (sliceId: string) => void
   onAdd: () => void
@@ -221,6 +237,9 @@ function InsightsBody({
   series,
   selectedMonth,
   onSelectMonth,
+  labelFor,
+  granularity,
+  categoryById,
   donutSlices,
   onDrill,
   onAdd,
@@ -260,7 +279,8 @@ function InsightsBody({
     )
   }
 
-  const monthEmpty = monthData.incomeCents === 0 && monthData.expenseCents === 0
+  const periodEmpty = monthData.incomeCents === 0 && monthData.expenseCents === 0
+  const periodNoun = granularity === 'week' ? 'week' : 'month'
 
   return (
     <div className="mt-5 space-y-4">
@@ -269,14 +289,16 @@ function InsightsBody({
       <Card>
         <h2 className="text-[12.5px] font-semibold uppercase tracking-wide text-ink-600">Trend</h2>
         <div className="mt-4">
-          <MonthlyTrendChart data={series} selectedMonthKey={selectedMonth} onSelectMonth={onSelectMonth} />
+          <MonthlyTrendChart data={series} selectedMonthKey={selectedMonth} onSelectMonth={onSelectMonth} labelFor={labelFor} />
         </div>
       </Card>
 
+      <BudgetsCard byCategory={monthData.byCategory} categoryById={categoryById} granularity={granularity} />
+
       <Card>
         <h2 className="text-[12.5px] font-semibold uppercase tracking-wide text-ink-600">Where it went</h2>
-        {monthEmpty || donutSlices.length === 0 ? (
-          <p className="mt-3 text-[15px] text-ink-600">No spending this month.</p>
+        {periodEmpty || donutSlices.length === 0 ? (
+          <p className="mt-3 text-[15px] text-ink-600">No spending this {periodNoun}.</p>
         ) : (
           <div className="mt-4">
             <CategoryDonut slices={donutSlices} onSelect={onDrill} nonInteractiveIds={new Set([OTHER_SLICE_ID])} />
@@ -284,12 +306,12 @@ function InsightsBody({
         )}
       </Card>
 
-      <FeesSpotlight feesCents={monthData.feesCents} expenseCents={monthData.expenseCents} />
+      <FeesSpotlight feesCents={monthData.feesCents} expenseCents={monthData.expenseCents} periodNoun={periodNoun} />
     </div>
   )
 }
 
-function CashFlowCard({ monthData }: { monthData: ReturnType<typeof monthInsights> }) {
+function CashFlowCard({ monthData }: { monthData: MonthInsights }) {
   const { incomeCents, expenseCents, netCents } = monthData
   const max = Math.max(incomeCents, expenseCents, 1)
   return (
@@ -333,7 +355,7 @@ function FlowRow({
   )
 }
 
-function FeesSpotlight({ feesCents, expenseCents }: { feesCents: number; expenseCents: number }) {
+function FeesSpotlight({ feesCents, expenseCents, periodNoun }: { feesCents: number; expenseCents: number; periodNoun: string }) {
   const pct = expenseCents > 0 ? Math.round((feesCents / expenseCents) * 100) : 0
   return (
     <Card>
@@ -344,13 +366,43 @@ function FeesSpotlight({ feesCents, expenseCents }: { feesCents: number; expense
             <AmountDisplay cents={-feesCents} tone="expense" size="title" />
           </p>
           <p className="mt-1 text-[15px] text-ink-600">
-            Transaction and Fuliza charges this month{pct > 0 ? ` — ${pct}% of your spending` : ''}.
+            Transaction and Fuliza charges this {periodNoun}{pct > 0 ? ` — ${pct}% of your spending` : ''}.
           </p>
         </>
       ) : (
-        <p className="mt-2 text-[15px] text-ink-600">No fees this month. Nice.</p>
+        <p className="mt-2 text-[15px] text-ink-600">No fees this {periodNoun}. Nice.</p>
       )}
     </Card>
+  )
+}
+
+/** Month/Week grain switch for the whole Insights screen. */
+function GranularityToggle({ value, onChange }: { value: Granularity; onChange: (g: Granularity) => void }) {
+  const options: { id: Granularity; label: string }[] = [
+    { id: 'month', label: 'Month' },
+    { id: 'week', label: 'Week' },
+  ]
+  return (
+    <div role="group" aria-label="Time range" className="flex gap-1 rounded-full bg-paper-50 p-1">
+      {options.map((option) => {
+        const selected = value === option.id
+        return (
+          <button
+            key={option.id}
+            type="button"
+            aria-pressed={selected}
+            onClick={() => onChange(option.id)}
+            className={cn(
+              'h-9 rounded-full px-3.5 text-[13px] font-semibold transition-colors duration-150 ease-out',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral-600 focus-visible:ring-offset-2 focus-visible:ring-offset-paper-50',
+              selected ? 'bg-paper-0 text-coral-600 shadow-card' : 'text-ink-600',
+            )}
+          >
+            {option.label}
+          </button>
+        )
+      })}
+    </div>
   )
 }
 

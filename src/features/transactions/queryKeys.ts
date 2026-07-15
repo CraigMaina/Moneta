@@ -46,6 +46,10 @@ export const goalKeys = {
   all: (userId: string | undefined) => ['goals', userId] as const,
 }
 
+export const budgetKeys = {
+  all: (userId: string | undefined) => ['budgets', userId] as const,
+}
+
 export const goalContributionKeys = {
   all: (userId: string | undefined) => ['goalContributions', userId] as const,
 }

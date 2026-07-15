@@ -171,7 +171,7 @@ export function Transactions() {
           <SearchField value={search} onChange={setSearch} />
         </div>
 
-        <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
+        <div className="mt-3 flex flex-wrap gap-2">
           {KIND_FILTERS.map((option) => (
             <FilterChip
               key={option.id}
@@ -299,7 +299,7 @@ function AccountFilterRow({
   if (accounts.length === 0) return null
 
   return (
-    <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
+    <div className="mt-3 flex flex-wrap gap-2">
       <FilterChip label="All accounts" active={value === 'all'} onSelect={() => onChange('all')} />
       {accounts.map((account) => (
         <FilterChip
@@ -330,7 +330,7 @@ function CategoryFilterRow({
   if (categories.length === 0) return null
 
   return (
-    <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
+    <div className="mt-3 flex flex-wrap gap-2">
       <FilterChip label="All categories" active={value === 'all'} onSelect={() => onChange('all')} />
       {categories.map((category) => (
         <FilterChip

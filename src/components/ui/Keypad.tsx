@@ -162,14 +162,16 @@ export function Keypad({ valueCents = 0, onChange, className }: KeypadProps) {
 
   return (
     <div className={cn('w-full', className)}>
-      <div className="mb-6 text-center">
+      {/* Pinned to the top of the scrolling sheet so the number you're typing
+          stays visible while your thumb is on the pad below (no scroll-up). */}
+      <div className="sticky top-0 z-10 mb-3 bg-paper-50 pb-2 pt-1 text-center">
         <p className="text-[12.5px] font-semibold uppercase tracking-wide text-ink-600">Amount</p>
-        <p className="mt-1 font-display text-[44px] font-semibold tabular-nums text-ink-900">
-          <span className="mr-1 align-top text-[20px] font-semibold text-ink-600">KES</span>
+        <p className="mt-0.5 font-display text-[38px] leading-tight font-semibold tabular-nums text-ink-900">
+          <span className="mr-1 align-top text-[18px] font-semibold text-ink-600">KES</span>
           {formatKeypadBuffer(state)}
         </p>
       </div>
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-3 gap-2.5">
         {KEY_ROWS.flat().map((key) => (
           <KeypadKeyButton key={key} keyValue={key} onPress={() => handleKey(key)} reducedMotion={Boolean(prefersReducedMotion)} />
         ))}
@@ -196,8 +198,10 @@ function KeypadKeyButton({
       whileTap={reducedMotion ? undefined : { scale: 0.94 }}
       transition={{ type: 'spring', stiffness: 260, damping: 24 }}
       className={cn(
-        'flex aspect-square w-full items-center justify-center rounded-full text-[24px] font-semibold tabular-nums text-ink-900',
-        'bg-paper-50 active:bg-coral-100',
+        // Height-capped (not aspect-square) so the whole pad + the form below
+        // fit a phone screen without scrolling; still well above the 44px floor.
+        'flex h-14 w-full items-center justify-center rounded-2xl text-[24px] font-semibold tabular-nums text-ink-900',
+        'bg-paper-0 shadow-sm active:bg-coral-100',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral-600 focus-visible:ring-offset-2 focus-visible:ring-offset-paper-0',
       )}
     >

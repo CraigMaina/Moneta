@@ -36,3 +36,7 @@ coverage
 # Supabase local
 supabase/.temp
 supabase/.branches
+
+# Claude / assistant files (excluded from repo)
+.claude/
+CLAUDE.md

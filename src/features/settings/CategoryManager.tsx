@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
-import { PencilIcon, PlusIcon, TrashIcon } from '../../components/ui/icons'
+import { cn } from '../../lib/cn'
+import { ChevronDownIcon, PencilIcon, PlusIcon, TrashIcon } from '../../components/ui/icons'
 import { useToast } from '../../components/ui/Toast'
 import { categoryIcon } from '../transactions/iconMaps'
 import { useCategories } from '../transactions/queries'
@@ -120,46 +121,66 @@ function CategorySection({
   onEdit: (c: Category) => void
   onRemove: (c: Category) => void
 }) {
+  // Collapsed by default: a full category list is long, so the section reads as
+  // a dropdown you open when you want to manage it, not a wall you scroll past.
+  const [open, setOpen] = useState(false)
+  const panelId = `category-section-${heading.toLowerCase()}`
+
   return (
     <div>
-      <h3 className="mb-2 px-1 text-[12.5px] font-semibold uppercase tracking-wide text-ink-600">{heading}</h3>
       <Card className="p-0">
-        {categories.length > 0 && (
-          <ul className="divide-y divide-ink-300/40">
-            {categories.map((category) => (
-              <li key={category.id} className="flex items-center gap-3 px-4 py-3">
-                <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-paper-50 text-ink-900">
-                  {categoryIcon(category)}
-                </span>
-                <p className="min-w-0 flex-1 truncate text-[15px] font-semibold text-ink-900">{category.name}</p>
-                <button
-                  type="button"
-                  aria-label={`Edit ${category.name}`}
-                  onClick={() => onEdit(category)}
-                  className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full text-ink-600 hover:bg-paper-50 hover:text-ink-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral-600"
-                >
-                  <PencilIcon className="h-5 w-5" />
-                </button>
-                <button
-                  type="button"
-                  aria-label={`Remove ${category.name}`}
-                  onClick={() => onRemove(category)}
-                  className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full text-ink-600 hover:bg-paper-50 hover:text-ink-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral-600"
-                >
-                  <TrashIcon className="h-5 w-5" />
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
         <button
           type="button"
-          onClick={onAdd}
-          className="flex w-full items-center gap-2 px-4 py-3.5 text-[15px] font-semibold text-coral-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral-600"
+          onClick={() => setOpen((v) => !v)}
+          aria-expanded={open}
+          aria-controls={panelId}
+          className="flex w-full items-center gap-3 px-4 py-3.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral-600"
         >
-          <PlusIcon className="h-5 w-5" />
-          Add {heading.toLowerCase()} category
+          <span className="flex-1 text-[15px] font-semibold text-ink-900">{heading}</span>
+          <span className="text-[13px] tabular-nums text-ink-600">{categories.length}</span>
+          <ChevronDownIcon className={cn('h-5 w-5 text-ink-600 transition-transform', open && 'rotate-180')} />
         </button>
+
+        {open && (
+          <div id={panelId} className="border-t border-ink-300/40">
+            {categories.length > 0 && (
+              <ul className="divide-y divide-ink-300/40">
+                {categories.map((category) => (
+                  <li key={category.id} className="flex items-center gap-3 px-4 py-3">
+                    <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-paper-50 text-ink-900">
+                      {categoryIcon(category)}
+                    </span>
+                    <p className="min-w-0 flex-1 truncate text-[15px] font-semibold text-ink-900">{category.name}</p>
+                    <button
+                      type="button"
+                      aria-label={`Edit ${category.name}`}
+                      onClick={() => onEdit(category)}
+                      className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full text-ink-600 hover:bg-paper-50 hover:text-ink-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral-600"
+                    >
+                      <PencilIcon className="h-5 w-5" />
+                    </button>
+                    <button
+                      type="button"
+                      aria-label={`Remove ${category.name}`}
+                      onClick={() => onRemove(category)}
+                      className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full text-ink-600 hover:bg-paper-50 hover:text-ink-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral-600"
+                    >
+                      <TrashIcon className="h-5 w-5" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <button
+              type="button"
+              onClick={onAdd}
+              className="flex w-full items-center gap-2 border-t border-ink-300/40 px-4 py-3.5 text-[15px] font-semibold text-coral-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral-600"
+            >
+              <PlusIcon className="h-5 w-5" />
+              Add {heading.toLowerCase()} category
+            </button>
+          </div>
+        )}
       </Card>
     </div>
   )

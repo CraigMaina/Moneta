@@ -375,3 +375,23 @@ Extracted the parse/review/import into a shared `features/import/StatementImport
 Added `pdfjs-dist` (lazy-imported, excluded from PWA precache — 425 kB chunk + 1.25 MB worker only load on actual PDF import). `features/import/pdfLines.ts` (pure, tested: regroups positioned fragments into lines) + `pdfText.ts` (pdf.js glue: extract text, password-protected flow via `PdfPasswordError`). Panel now accepts PDF upload, prompts for the phone-sent statement password (on-device, never stored), extracts → parses → reviews. Build verified: pdf chunks code-split + out of precache. **470 tests** (3 new), typecheck + lint + build all clean.
 
 **All requested features (F1, F5, F6, F7, F8, F9, F10, F11, F12, F13) delivered.** Deferred/noted: Sunday Wrapped review + Web Push (F8), true auth-user deletion (F11). PDF row-reconstruction heuristic still wants validation against a real (redacted) statement.
+
+### Statement parser fixed to the real M-PESA format (F5)
+
+User uploaded their real 77-page statement → "no transactions found". pdf.js extraction was fine; the parser assumed the wrong row shape. Fixed against the real extracted text:
+- Real rows have **one signed amount column + balance** (not paid-in/withdrawn); `readAmount` supports both formats, direction from the sign.
+- Fixed a **negative-cents bug** in `parseAmountToCents` (`-3,115.56` → was `-311444`).
+- **Multi-line detail stitching** + noise/verification-code filtering so wrapped merchant names merge and page furniture doesn't.
+- **Repeated receipts** (Fuliza multi-row) get deterministic `-1/-2` suffixes to survive the `mpesa_ref` unique index.
+- Import **chunked (200/req)** for dedupe read + insert; review list caps at 300 rendered rows with Show-all + Select-all/Clear.
+- New fixture `__fixtures__/sample-statement-signed.txt` + tests. **478 tests** (7 new), typecheck + lint clean.
+
+### UX batch: budgets, weekly insights, entry polish
+
+- **Budgets (new feature):** migration `20260715120000_create_budgets.sql` (RLS, unique per user+category, positive-cents monthly cap) + `database.types` entry; `features/budgets/` (types, queries, `useSetBudget`/`useClearBudget`, pure `budgetMath` + 7 tests, `BudgetEditorSheet`, `BudgetsCard`); `routes/Budgets.tsx` (`/budgets`, back button) linked from Settings → Money; progress card on Insights (over = coral, ≥80% = amber). Monthly cap, weekly = cap×12/52 at display edge.
+- **Weekly Insights:** `insightsMath` gained Nairobi Monday-start week helpers + `period*` granularity dispatchers (+ tests); Insights has a Month/Week toggle driving the whole screen; `MonthlyTrendChart` takes an optional `labelFor`.
+- **Keypad:** height-capped keys (fits without scroll) + sticky amount readout; keys `bg-paper-0 shadow-sm` for contrast on every surface.
+- **Pickers/filters:** CategoryPicker "+N more" opens a popup sheet (tests updated); account picker + Transactions filter chips wrap instead of sideways scroll.
+- **Settings categories:** Spending/Income groups are collapsible dropdowns (collapsed by default, count in header).
+- Green: tsc + eslint clean, **491 tests**, production build OK (pdf chunks still code-split).
+- **Note:** `budgets` migration is written but must be applied (`npx supabase db push`) before the feature works against a real DB.

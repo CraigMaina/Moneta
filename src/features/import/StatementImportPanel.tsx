@@ -38,6 +38,11 @@ export function StatementImportPanel({
   const [result, setResult] = useState<ParseStatementResult | null>(null)
   const [accountId, setAccountId] = useState<string | null>(null)
   const [selected, setSelected] = useState<Set<string>>(new Set())
+  // A full statement can be thousands of rows; render a slice by default so the
+  // review list stays smooth. Every row is still imported regardless of what's
+  // painted — the selection Set, not the DOM, is the source of truth.
+  const [showAll, setShowAll] = useState(false)
+  const ROW_RENDER_CAP = 300
 
   // PDF path (lazy pdf.js): extraction status + password-protected flow.
   const [pdfFile, setPdfFile] = useState<File | null>(null)
@@ -62,9 +67,17 @@ export function StatementImportPanel({
   const parseAndShow = (source: string) => {
     const parsed = parseStatement(source)
     setResult(parsed)
+    setShowAll(false)
     setSelected(new Set(parsed.candidates.filter((c) => !existingRefs.has(c.mpesaRef)).map((c) => c.mpesaRef)))
     setAccountId((current) => current ?? defaultAccountId)
   }
+
+  const importableRefs = useMemo(
+    () => (result?.candidates ?? []).filter((c) => !existingRefs.has(c.mpesaRef)).map((c) => c.mpesaRef),
+    [result, existingRefs],
+  )
+  const allSelected = importableRefs.length > 0 && importableRefs.every((ref) => selected.has(ref))
+  const toggleSelectAll = () => setSelected(allSelected ? new Set() : new Set(importableRefs))
 
   const handleParse = () => parseAndShow(text)
 
@@ -278,14 +291,23 @@ export function StatementImportPanel({
           <div className="flex items-baseline justify-between">
             <p className="text-[12.5px] font-semibold uppercase tracking-wide text-ink-600">
               {result.candidates.length} found
+              {result.skippedStatus + result.skippedZero > 0
+                ? ` · ${result.skippedStatus + result.skippedZero} skipped`
+                : ''}
             </p>
-            {result.skippedStatus + result.skippedZero > 0 && (
-              <p className="text-[12px] text-ink-600">{result.skippedStatus + result.skippedZero} skipped</p>
+            {importableRefs.length > 0 && (
+              <button
+                type="button"
+                onClick={toggleSelectAll}
+                className="text-[13px] font-semibold text-coral-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral-600"
+              >
+                {allSelected ? 'Clear all' : 'Select all'}
+              </button>
             )}
           </div>
 
           <Card className="divide-y divide-ink-300/40 p-0">
-            {result.candidates.map((candidate) => (
+            {(showAll ? result.candidates : result.candidates.slice(0, ROW_RENDER_CAP)).map((candidate) => (
               <CandidateRow
                 key={candidate.mpesaRef}
                 candidate={candidate}
@@ -294,6 +316,15 @@ export function StatementImportPanel({
                 onToggle={() => toggle(candidate.mpesaRef)}
               />
             ))}
+            {!showAll && result.candidates.length > ROW_RENDER_CAP && (
+              <button
+                type="button"
+                onClick={() => setShowAll(true)}
+                className="w-full px-4 py-3 text-[13px] font-semibold text-coral-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral-600"
+              >
+                Show all {result.candidates.length.toLocaleString()} — {result.candidates.length - ROW_RENDER_CAP} more
+              </button>
+            )}
           </Card>
 
           <Button

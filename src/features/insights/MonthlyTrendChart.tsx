@@ -16,11 +16,18 @@ export interface MonthlyTrendChartProps {
   data: MonthTotals[]
   selectedMonthKey: string
   onSelectMonth: (monthKey: string) => void
+  /** Axis/label formatter for a period key. Defaults to month labels (`yyyy-MM` → "Jul"). */
+  labelFor?: (periodKey: string) => string
 }
 
 const CHART_HEIGHT_PX = 120
 
-export function MonthlyTrendChart({ data, selectedMonthKey, onSelectMonth }: MonthlyTrendChartProps) {
+export function MonthlyTrendChart({
+  data,
+  selectedMonthKey,
+  onSelectMonth,
+  labelFor = monthKeyShortLabel,
+}: MonthlyTrendChartProps) {
   const maxCents = Math.max(1, ...data.flatMap((d) => [d.incomeCents, d.expenseCents]))
 
   const barHeight = (cents: number) => `${(cents / maxCents) * CHART_HEIGHT_PX}px`
@@ -36,7 +43,7 @@ export function MonthlyTrendChart({ data, selectedMonthKey, onSelectMonth }: Mon
               type="button"
               onClick={() => onSelectMonth(month.monthKey)}
               aria-pressed={selected}
-              aria-label={`${monthKeyShortLabel(month.monthKey)}: in ${formatKES(month.incomeCents)}, out ${formatKES(month.expenseCents)}`}
+              aria-label={`${labelFor(month.monthKey)}: in ${formatKES(month.incomeCents)}, out ${formatKES(month.expenseCents)}`}
               className="group flex h-full flex-1 items-end justify-center gap-1 rounded-t-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral-600"
             >
               <span
@@ -60,7 +67,7 @@ export function MonthlyTrendChart({ data, selectedMonthKey, onSelectMonth }: Mon
               month.monthKey === selectedMonthKey ? 'font-semibold text-ink-900' : 'text-ink-600',
             )}
           >
-            {monthKeyShortLabel(month.monthKey)}
+            {labelFor(month.monthKey)}
           </span>
         ))}
       </div>
