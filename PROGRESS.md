@@ -316,3 +316,14 @@ Logging streak + Home "morning money minute". `streaks` table already existed (R
 - UI: `features/habits/DailyCard.tsx` — streak flame + count, morning-minute line (yesterday's spend), auto-counts on today's activity, "No spend today" button otherwise; skeleton while loading, null on error. Wired into Home under the hero.
 
 **Next (user batch):** F9 nudges, F11 app-lock/delete, F13 CSV export, F12 offline queue, F5 statement import.
+
+## Rule-based nudges — F9 (lead)
+
+Proactive in-app nudges, all derived from existing data (no migration). Typecheck + lint clean, **449 tests** (10 new). Three rules in one pure engine; Home surface caps at 2, renders null when idle.
+
+- `features/nudges/nudgeRules.ts` — pure `computeNudges`: category-pace (vs trailing-3-mo average, no budgets table), subscription-detector (repeated similar monthly charge, not already tracked → "Track it"), unusual-spend (≥3× category median with ≥4 samples). Exhaustively tested.
+- `nudgeStore.ts` — session-only dismissal (Zustand, in-memory; not localStorage per CLAUDE.md).
+- `useNudges.ts` — reads ~5-month transaction window + categories + recurring items, memoizes, filters dismissed.
+- `NudgesSurface.tsx` — Home card list (amber accent for warnings), dismiss, one-tap "Track it" opening `RecurringEditorSheet` via new `prefill` prop. Wired into Home under DailyCard.
+
+**Next (user batch):** F11 app-lock/delete, F13 CSV export, F12 offline queue, F5 statement import.

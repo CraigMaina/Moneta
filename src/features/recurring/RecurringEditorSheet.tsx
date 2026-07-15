@@ -18,23 +18,39 @@ import { useCreateRecurringItem, useUpdateRecurringItem } from './mutations'
  * fields (no setState-in-effect). No `<form>` in the sheet (CLAUDE.md). Kind is
  * expense or income only — a recurring transfer isn't a bill.
  */
+export interface RecurringPrefill {
+  merchant?: string
+  amountCents?: number
+  categoryId?: string | null
+}
+
 export interface RecurringEditorSheetProps {
   open: boolean
   onClose: () => void
   item?: RecurringItem | null
+  /** Seed values for a *new* item (e.g. from a subscription nudge); ignored when `item` is set. */
+  prefill?: RecurringPrefill
 }
 
 type RecurringKind = 'income' | 'expense'
 
-export function RecurringEditorSheet({ open, onClose, item }: RecurringEditorSheetProps) {
+export function RecurringEditorSheet({ open, onClose, item, prefill }: RecurringEditorSheetProps) {
   return (
     <Sheet open={open} onClose={onClose} title={item ? 'Edit recurring' : 'New recurring'}>
-      {open && <RecurringEditorBody item={item} onClose={onClose} />}
+      {open && <RecurringEditorBody item={item} prefill={prefill} onClose={onClose} />}
     </Sheet>
   )
 }
 
-function RecurringEditorBody({ item, onClose }: { item?: RecurringItem | null; onClose: () => void }) {
+function RecurringEditorBody({
+  item,
+  prefill,
+  onClose,
+}: {
+  item?: RecurringItem | null
+  prefill?: RecurringPrefill
+  onClose: () => void
+}) {
   const { showToast } = useToast()
   const accountsQuery = useAccounts()
   const categoriesQuery = useCategories()
@@ -46,10 +62,10 @@ function RecurringEditorBody({ item, onClose }: { item?: RecurringItem | null; o
   const categories = categoriesQuery.data ?? []
 
   const [kind, setKind] = useState<RecurringKind>((item?.kind as RecurringKind | undefined) ?? 'expense')
-  const [amountCents, setAmountCents] = useState(item?.amount_cents ?? 0)
+  const [amountCents, setAmountCents] = useState(item?.amount_cents ?? prefill?.amountCents ?? 0)
   const [accountId, setAccountId] = useState<string | null>(item?.account_id ?? accounts[0]?.id ?? null)
-  const [categoryId, setCategoryId] = useState<string | null>(item?.category_id ?? null)
-  const [merchant, setMerchant] = useState(item?.merchant ?? '')
+  const [categoryId, setCategoryId] = useState<string | null>(item?.category_id ?? prefill?.categoryId ?? null)
+  const [merchant, setMerchant] = useState(item?.merchant ?? prefill?.merchant ?? '')
   const [cadence, setCadence] = useState<Cadence>((item?.cadence as Cadence | undefined) ?? 'monthly')
   const [nextDueDate, setNextDueDate] = useState(item?.next_due_date ?? toNairobiDateString(new Date()))
 

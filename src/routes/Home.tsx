@@ -13,6 +13,7 @@ import { SafeToSpendHero } from '../components/ui/SafeToSpendHero'
 import { TabBar } from '../components/ui/TabBar'
 import { AddTransactionSheet } from '../features/transactions/AddTransactionSheet'
 import { DailyCard } from '../features/habits/DailyCard'
+import { NudgesSurface } from '../features/nudges/NudgesSurface'
 import { UpcomingBills } from '../features/recurring/UpcomingBills'
 import { toNairobiDateString } from '../features/transactions/nairobiDate'
 import { useAccountBalances, useCategories, useTransactions } from '../features/transactions/queries'
@@ -86,6 +87,10 @@ export function Home() {
 
         <section className="mt-6">
           <DailyCard />
+        </section>
+
+        <section className="mt-6 empty:hidden">
+          <NudgesSurface />
         </section>
 
         <section className="mt-6 empty:hidden">
