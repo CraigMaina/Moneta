@@ -327,3 +327,13 @@ Proactive in-app nudges, all derived from existing data (no migration). Typechec
 - `NudgesSurface.tsx` — Home card list (amber accent for warnings), dismiss, one-tap "Track it" opening `RecurringEditorSheet` via new `prefill` prop. Wired into Home under DailyCard.
 
 **Next (user batch):** F11 app-lock/delete, F13 CSV export, F12 offline queue, F5 statement import.
+
+## App lock + delete-all-data — F11 (lead)
+
+Local PIN lock (+ optional biometrics) and a guarded delete-all. Typecheck + lint clean, **454 tests** (5 new — PIN crypto). No migration (device-local, IndexedDB). Biometric path is capability-detected/fail-safe, not unit-tested (device-dependent).
+
+- `features/security/pinCrypto.ts` — PBKDF2-SHA-256 hash + constant-time verify (tested); `lockStorage.ts` — IndexedDB PIN/biometric records; `biometrics.ts` — WebAuthn platform-authenticator enroll/verify (guarded); `lockStore.ts` — Zustand lock status + refresh.
+- `PinPad.tsx` (4-digit), `LockScreen.tsx` (verify + biometric + forgot-PIN sign-out), `LockGate.tsx` (splash → lock; auto-lock on background) wired into App.tsx inside SessionGate.
+- Settings: `SecuritySettings.tsx` (set/change/turn-off PIN, biometric toggle) + `SetPinSheet.tsx`; `DeleteAllData.tsx` + `deleteData.ts` (FK-ordered wipe of records, keeps accounts/categories, resets profile; clears cache/persister/lock) behind a type-to-confirm sheet.
+
+**Next (user batch):** F13 CSV export, F12 offline queue, F5 statement import.

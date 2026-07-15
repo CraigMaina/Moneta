@@ -6,13 +6,15 @@ import { AccountManager } from '../features/settings/AccountManager'
 import { CategoryManager } from '../features/settings/CategoryManager'
 import { ThemeToggle } from '../features/settings/ThemeToggle'
 import { useSignOut } from '../features/settings/useSignOut'
+import { SecuritySettings } from '../features/security/SecuritySettings'
+import { DeleteAllData } from '../features/security/DeleteAllData'
 import { useSession } from '../features/auth/useSession'
 
 /**
- * Settings / Account (PRD §7 — manage the app). Four quiet sections:
- * Appearance (dark mode), Accounts, Categories, and Account (identity +
- * sign-out). Reached from the gear on Home; not a bottom-tab (those stay the
- * five core PRD screens).
+ * Settings / Account (PRD §7 — manage the app). Quiet sections: Appearance
+ * (dark mode), Money (recurring), Accounts, Categories, Security (app lock),
+ * Account (identity + sign-out), and a Danger zone (delete all data). Reached
+ * from the gear on Home; not a bottom-tab (those stay the five core PRD screens).
  */
 export function Settings() {
   const navigate = useNavigate()
@@ -58,6 +60,10 @@ export function Settings() {
           <CategoryManager />
         </Section>
 
+        <Section title="Security">
+          <SecuritySettings />
+        </Section>
+
         <Section title="Account">
           <Card>
             <p className="text-[12.5px] font-semibold uppercase tracking-wide text-ink-600">Signed in as</p>
@@ -73,6 +79,10 @@ export function Settings() {
               Sign out
             </Button>
           </Card>
+        </Section>
+
+        <Section title="Danger zone">
+          <DeleteAllData />
         </Section>
       </div>
     </main>
