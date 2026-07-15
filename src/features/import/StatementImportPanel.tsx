@@ -78,6 +78,13 @@ export function StatementImportPanel({
       setNeedsPassword(false)
       setPdfFile(null)
       setPdfPassword('')
+      if (extracted.trim().length === 0) {
+        // A text layer we couldn't read anything from — almost always a scanned
+        // / image-only PDF rather than a real text statement.
+        setPdfError('We couldn’t read any text from that PDF — it may be a scanned image rather than a text statement.')
+        setResult({ candidates: [], skippedZero: 0, skippedStatus: 0 })
+        return
+      }
       parseAndShow(extracted)
     } catch (error) {
       const { PdfPasswordError } = await import('./pdfText')
@@ -218,8 +225,25 @@ export function StatementImportPanel({
         <Card>
           <p className="text-[15px] font-semibold text-ink-900">No transactions found</p>
           <p className="mt-1 text-[13px] text-ink-600">
-            Make sure you pasted the transactions table (with the Receipt No., Completion Time, and amount columns).
+            Make sure the transactions table is included (with the Receipt No., Completion Time, and amount columns).
           </p>
+          {text.trim().length > 0 && (
+            <details className="mt-3">
+              <summary className="cursor-pointer text-[13px] font-semibold text-coral-600">
+                View extracted text ({text.length.toLocaleString()} characters)
+              </summary>
+              <pre className="mt-2 max-h-56 overflow-auto whitespace-pre-wrap rounded-card bg-paper-50 p-3 text-[11px] leading-snug text-ink-900">
+                {text}
+              </pre>
+              <Button
+                variant="secondary"
+                onClick={() => void navigator.clipboard?.writeText(text)}
+                className="mt-2"
+              >
+                Copy extracted text
+              </Button>
+            </details>
+          )}
         </Card>
       )}
 

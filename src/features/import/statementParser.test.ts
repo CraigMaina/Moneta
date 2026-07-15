@@ -46,4 +46,13 @@ describe('parseStatement', () => {
     // 08:12:33 Nairobi = 05:12:33 UTC
     expect(first?.occurredAt).toBe('2026-06-01T05:12:33.000Z')
   })
+
+  it('tolerates uppercase status and a missing seconds field', () => {
+    const line = 'QAB1CD2EF3 2026-07-01 09:30 Merchant Payment to Carrefour COMPLETED 0.00 899.00 1,200.00'
+    const { candidates } = parseStatement(line)
+    expect(candidates).toHaveLength(1)
+    expect(candidates[0]).toMatchObject({ kind: 'expense', amountCents: 89900, merchant: 'Carrefour' })
+    // 09:30:00 Nairobi = 06:30:00 UTC
+    expect(candidates[0]?.occurredAt).toBe('2026-07-01T06:30:00.000Z')
+  })
 })

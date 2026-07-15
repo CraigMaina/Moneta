@@ -26,9 +26,12 @@ export interface StatementCandidate {
   note: string
 }
 
-// Receipt(10) · date · time · details(lazy) · status · paidIn · withdrawn · balance
+// Receipt(10) · date · time · details(lazy) · status(word) · paidIn · withdrawn · balance.
+// Kept tolerant of real statements: seconds are optional, the status is any
+// word (compared case-insensitively below), and the three money columns allow
+// an optional leading minus.
 const LINE_RE =
-  /^([A-Z0-9]{10})\s+(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2}:\d{2})\s+(.+?)\s+(Completed|Failed|Pending|Reversed)\s+([\d,]+\.\d{2})\s+([\d,]+\.\d{2})\s+([\d,]+\.\d{2})\s*$/
+  /^([A-Z0-9]{10})\s+(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2}(?::\d{2})?)\s+(.+?)\s+([A-Za-z]+)\s+(-?[\d,]+\.\d{2})\s+(-?[\d,]+\.\d{2})\s+(-?[\d,]+\.\d{2})\s*$/
 
 /** "1,500.00" → 150000 integer cents, using integer math only (never a float multiply). */
 export function parseAmountToCents(value: string): number {
@@ -41,7 +44,7 @@ export function parseAmountToCents(value: string): number {
 function toIso(date: string, time: string): string {
   const [y, m, d] = date.split('-').map(Number)
   const [hh, mm, ss] = time.split(':').map(Number)
-  const zoned = new TZDate(Number(y), Number(m) - 1, Number(d), Number(hh), Number(mm), Number(ss), NAIROBI_TZ)
+  const zoned = new TZDate(Number(y), Number(m) - 1, Number(d), Number(hh), Number(mm), Number(ss ?? 0), NAIROBI_TZ)
   // TZDate.toISOString() keeps the +03:00 offset; normalize to a UTC "Z" instant.
   return new Date(zoned.getTime()).toISOString()
 }
@@ -90,13 +93,13 @@ export function parseStatement(text: string): ParseStatementResult {
     if (!match) continue
 
     const [, ref, date, time, details, status, paidIn, withdrawn] = match
-    if (status !== 'Completed') {
+    if ((status ?? '').toLowerCase() !== 'completed') {
       skippedStatus += 1
       continue
     }
 
-    const paidInCents = parseAmountToCents(paidIn ?? '0')
-    const withdrawnCents = parseAmountToCents(withdrawn ?? '0')
+    const paidInCents = Math.abs(parseAmountToCents(paidIn ?? '0'))
+    const withdrawnCents = Math.abs(parseAmountToCents(withdrawn ?? '0'))
     if (paidInCents === 0 && withdrawnCents === 0) {
       skippedZero += 1
       continue
