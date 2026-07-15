@@ -66,7 +66,14 @@ export function SignIn() {
     const credentials = { email: trimmedEmail, password }
 
     if (mode === 'signup') {
-      const { data, error } = await supabase.auth.signUp(credentials)
+      // emailRedirectTo so the confirmation link returns to wherever they signed
+      // up from (localhost in dev, the deployed origin in prod) instead of only
+      // the project's fixed Site URL. Both origins must be in Supabase's
+      // Redirect URLs allowlist.
+      const { data, error } = await supabase.auth.signUp({
+        ...credentials,
+        options: { emailRedirectTo: window.location.origin },
+      })
       setSubmitting(false)
       if (error) {
         const already = /already registered|already exists/i.test(error.message)

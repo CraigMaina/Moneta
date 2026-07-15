@@ -63,10 +63,13 @@ describe('SignIn', () => {
     await user.type(screen.getByLabelText('Confirm password'), 'longenoughpw')
     await user.click(screen.getByRole('button', { name: 'Create account' }))
 
-    expect(mockSupabase.auth.signUp).toHaveBeenCalledWith({
-      email: 'kev@example.com',
-      password: 'longenoughpw',
-    })
+    expect(mockSupabase.auth.signUp).toHaveBeenCalledWith(
+      expect.objectContaining({
+        email: 'kev@example.com',
+        password: 'longenoughpw',
+        options: expect.objectContaining({ emailRedirectTo: expect.any(String) }),
+      }),
+    )
   })
 
   it('keeps create-account disabled until the retyped password matches', async () => {
