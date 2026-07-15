@@ -9,12 +9,15 @@ const mockSupabase = vi.hoisted(() => ({
     onAuthStateChange: vi.fn(() => ({ data: { subscription: { unsubscribe: vi.fn() } } })),
     signInWithPassword: vi.fn(),
     signUp: vi.fn(),
+    resetPasswordForEmail: vi.fn(),
+    updateUser: vi.fn(),
   },
 }))
 vi.mock('../../lib/supabase', () => ({ supabase: mockSupabase }))
 
 import { SignIn } from './SignIn'
 import { SessionGate } from './SessionGate'
+import { UpdatePassword } from './UpdatePassword'
 
 function renderSignIn() {
   return render(
@@ -88,6 +91,44 @@ describe('SignIn', () => {
     await user.click(screen.getByRole('button', { name: 'Sign in' }))
 
     expect(await screen.findByText('Email or password is incorrect')).toBeInTheDocument()
+  })
+
+  it('sends a reset email from the forgot-password flow', async () => {
+    const user = userEvent.setup()
+    mockSupabase.auth.resetPasswordForEmail.mockResolvedValue({ data: {}, error: null })
+    renderSignIn()
+
+    await user.click(screen.getByRole('button', { name: 'Forgot password?' }))
+    await user.type(screen.getByLabelText('Email'), 'wanjiru@example.com')
+    await user.click(screen.getByRole('button', { name: 'Send reset link' }))
+
+    expect(mockSupabase.auth.resetPasswordForEmail).toHaveBeenCalledWith(
+      'wanjiru@example.com',
+      expect.objectContaining({ redirectTo: expect.any(String) }),
+    )
+    // Back to the sign-in view after the email is sent.
+    expect(await screen.findByRole('button', { name: 'Sign in' })).toBeInTheDocument()
+  })
+})
+
+describe('UpdatePassword', () => {
+  it('sets the new password via updateUser and calls onDone', async () => {
+    const user = userEvent.setup()
+    mockSupabase.auth.updateUser.mockResolvedValue({ data: { user: {} }, error: null })
+    const onDone = vi.fn()
+    render(
+      <ToastProvider>
+        <UpdatePassword onDone={onDone} />
+      </ToastProvider>,
+    )
+
+    const submit = screen.getByRole('button', { name: 'Update password' })
+    expect(submit).toBeDisabled()
+    await user.type(screen.getByLabelText('New password'), 'brandnewpw')
+    await user.click(submit)
+
+    expect(mockSupabase.auth.updateUser).toHaveBeenCalledWith({ password: 'brandnewpw' })
+    await waitFor(() => expect(onDone).toHaveBeenCalled())
   })
 })
 

@@ -4,19 +4,23 @@ import { Button } from '../../components/ui/Button'
 import { useToast } from '../../components/ui/Toast'
 
 /**
- * Email + password sign-in and account creation (PRD F1). Buttons + handlers
- * only, no HTML `<form>` (CLAUDE.md). Password auth (not the earlier magic-link
- * / OTP flow) so signing in sends no email and never hits the email rate limit.
+ * Email + password sign-in, account creation, and password reset (PRD F1).
+ * Buttons + handlers only, no HTML `<form>` (CLAUDE.md). Password auth (not the
+ * earlier magic-link / OTP flow) so signing in sends no email and never hits
+ * the email rate limit.
  *
- * `signInWithPassword` logs an existing user in; `signUp` creates one. If the
- * Supabase project has "Confirm email" enabled, `signUp` returns a user with no
- * session (a confirmation email is sent) and we tell the user to confirm; if it
- * is disabled, `signUp` returns a session and `onAuthStateChange` signs them
- * straight in. Voice stays warm and plain.
+ * `signInWithPassword` logs an existing user in; `signUp` creates one;
+ * `resetPasswordForEmail` mails a recovery link that lands back on the app,
+ * where `UpdatePassword` sets the new password. If the Supabase project has
+ * "Confirm email" enabled, `signUp` returns a user with no session (a
+ * confirmation email is sent) and we tell the user to confirm; if disabled,
+ * `signUp` returns a session and `onAuthStateChange` signs them straight in.
  */
+type Mode = 'signin' | 'signup' | 'reset'
+
 export function SignIn() {
   const { showToast } = useToast()
-  const [mode, setMode] = useState<'signin' | 'signup'>('signin')
+  const [mode, setMode] = useState<Mode>('signin')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -25,12 +29,32 @@ export function SignIn() {
   const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())
   // Supabase requires 6+; ask for 8+ on new accounts, accept any non-empty on sign-in.
   const passwordValid = mode === 'signup' ? password.length >= 8 : password.length >= 1
-  const canSubmit = emailValid && passwordValid && !submitting
+  const canSubmit = mode === 'reset' ? emailValid && !submitting : emailValid && passwordValid && !submitting
 
   async function submit() {
     if (!canSubmit) return
     setSubmitting(true)
-    const credentials = { email: email.trim(), password }
+    const trimmedEmail = email.trim()
+
+    if (mode === 'reset') {
+      const { error } = await supabase.auth.resetPasswordForEmail(trimmedEmail, {
+        redirectTo: window.location.origin,
+      })
+      setSubmitting(false)
+      if (error) {
+        showToast({ title: "Couldn't send the reset email", description: error.message, variant: 'warn' })
+        return
+      }
+      showToast({
+        title: 'Check your email',
+        description: 'We sent a link to reset your password.',
+        variant: 'success',
+      })
+      setMode('signin')
+      return
+    }
+
+    const credentials = { email: trimmedEmail, password }
 
     if (mode === 'signup') {
       const { data, error } = await supabase.auth.signUp(credentials)
@@ -72,11 +96,15 @@ export function SignIn() {
     // On success, onAuthStateChange flips the session and the gate renders the app.
   }
 
+  const submitLabel = mode === 'signup' ? 'Create account' : mode === 'reset' ? 'Send reset link' : 'Sign in'
+
   return (
     <main className="flex min-h-dvh flex-col items-center justify-center bg-paper-0 px-6">
       <div className="w-full max-w-sm">
         <h1 className="font-display text-[40px] font-semibold leading-none text-coral-600">Moneta</h1>
-        <p className="mt-3 text-[15px] text-ink-600">Know what you can safely spend today.</p>
+        <p className="mt-3 text-[15px] text-ink-600">
+          {mode === 'reset' ? 'Reset your password.' : 'Know what you can safely spend today.'}
+        </p>
 
         <div className="mt-8">
           <label htmlFor="signin-email" className="block text-[12.5px] font-semibold uppercase tracking-wide text-ink-600">
@@ -89,35 +117,53 @@ export function SignIn() {
             autoComplete="email"
             value={email}
             onChange={(event) => setEmail(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' && mode === 'reset') submit()
+            }}
             placeholder="you@example.com"
             className="mt-2 h-12 w-full rounded-card bg-paper-50 px-4 text-[15px] text-ink-900 placeholder:text-ink-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral-600"
           />
 
-          <label htmlFor="signin-password" className="mt-4 block text-[12.5px] font-semibold uppercase tracking-wide text-ink-600">
-            Password
-          </label>
-          <div className="relative mt-2">
-            <input
-              id="signin-password"
-              type={showPassword ? 'text' : 'password'}
-              autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter') submit()
-              }}
-              placeholder={mode === 'signup' ? 'At least 8 characters' : 'Your password'}
-              className="h-12 w-full rounded-card bg-paper-50 pl-4 pr-16 text-[15px] text-ink-900 placeholder:text-ink-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral-600"
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword((v) => !v)}
-              aria-label={showPassword ? 'Hide password' : 'Show password'}
-              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full px-2 py-1 text-[13px] font-semibold text-ink-600 hover:text-ink-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral-600"
-            >
-              {showPassword ? 'Hide' : 'Show'}
-            </button>
-          </div>
+          {mode !== 'reset' && (
+            <>
+              <div className="mt-4 flex items-baseline justify-between">
+                <label htmlFor="signin-password" className="block text-[12.5px] font-semibold uppercase tracking-wide text-ink-600">
+                  Password
+                </label>
+                {mode === 'signin' && (
+                  <button
+                    type="button"
+                    onClick={() => setMode('reset')}
+                    className="text-[12.5px] font-semibold text-coral-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral-600"
+                  >
+                    Forgot password?
+                  </button>
+                )}
+              </div>
+              <div className="relative mt-2">
+                <input
+                  id="signin-password"
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') submit()
+                  }}
+                  placeholder={mode === 'signup' ? 'At least 8 characters' : 'Your password'}
+                  className="h-12 w-full rounded-card bg-paper-50 pl-4 pr-16 text-[15px] text-ink-900 placeholder:text-ink-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral-600"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full px-2 py-1 text-[13px] font-semibold text-ink-600 hover:text-ink-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral-600"
+                >
+                  {showPassword ? 'Hide' : 'Show'}
+                </button>
+              </div>
+            </>
+          )}
 
           <Button
             variant="primary"
@@ -128,22 +174,35 @@ export function SignIn() {
             loading={submitting}
             onClick={submit}
           >
-            {mode === 'signup' ? 'Create account' : 'Sign in'}
+            {submitLabel}
           </Button>
 
-          <p className="mt-4 text-center text-[13px] text-ink-600">
-            {mode === 'signup' ? 'Already have an account?' : 'New to Moneta?'}{' '}
-            <button
-              type="button"
-              onClick={() => {
-                setMode(mode === 'signup' ? 'signin' : 'signup')
-                setPassword('')
-              }}
-              className="font-semibold text-coral-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral-600"
-            >
-              {mode === 'signup' ? 'Sign in' : 'Create an account'}
-            </button>
-          </p>
+          {mode === 'reset' ? (
+            <p className="mt-4 text-center text-[13px] text-ink-600">
+              Remembered it?{' '}
+              <button
+                type="button"
+                onClick={() => setMode('signin')}
+                className="font-semibold text-coral-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral-600"
+              >
+                Back to sign in
+              </button>
+            </p>
+          ) : (
+            <p className="mt-4 text-center text-[13px] text-ink-600">
+              {mode === 'signup' ? 'Already have an account?' : 'New to Moneta?'}{' '}
+              <button
+                type="button"
+                onClick={() => {
+                  setMode(mode === 'signup' ? 'signin' : 'signup')
+                  setPassword('')
+                }}
+                className="font-semibold text-coral-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral-600"
+              >
+                {mode === 'signup' ? 'Sign in' : 'Create an account'}
+              </button>
+            </p>
+          )}
         </div>
       </div>
     </main>
