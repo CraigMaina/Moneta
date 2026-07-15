@@ -39,6 +39,13 @@ export function StatementImportPanel({
   const [accountId, setAccountId] = useState<string | null>(null)
   const [selected, setSelected] = useState<Set<string>>(new Set())
 
+  // PDF path (lazy pdf.js): extraction status + password-protected flow.
+  const [pdfFile, setPdfFile] = useState<File | null>(null)
+  const [pdfPassword, setPdfPassword] = useState('')
+  const [needsPassword, setNeedsPassword] = useState(false)
+  const [pdfError, setPdfError] = useState<string | null>(null)
+  const [extracting, setExtracting] = useState(false)
+
   const accounts = accountsQuery.data ?? []
   const existingRefs = useMemo(() => {
     const set = new Set<string>()
@@ -52,16 +59,58 @@ export function StatementImportPanel({
     return mpesa?.id ?? list[0]?.id ?? null
   }, [accountsQuery.data])
 
-  const handleParse = () => {
-    const parsed = parseStatement(text)
+  const parseAndShow = (source: string) => {
+    const parsed = parseStatement(source)
     setResult(parsed)
     setSelected(new Set(parsed.candidates.filter((c) => !existingRefs.has(c.mpesaRef)).map((c) => c.mpesaRef)))
     setAccountId((current) => current ?? defaultAccountId)
   }
 
+  const handleParse = () => parseAndShow(text)
+
+  const runPdfExtraction = async (file: File, password?: string) => {
+    setExtracting(true)
+    setPdfError(null)
+    try {
+      const { extractPdfText } = await import('./pdfText')
+      const extracted = await extractPdfText(file, password)
+      setText(extracted)
+      setNeedsPassword(false)
+      setPdfFile(null)
+      setPdfPassword('')
+      parseAndShow(extracted)
+    } catch (error) {
+      const { PdfPasswordError } = await import('./pdfText')
+      if (error instanceof PdfPasswordError) {
+        setPdfFile(file)
+        setNeedsPassword(true)
+        setPdfError(error.incorrect ? 'That password didn’t work. Try again.' : null)
+      } else {
+        setPdfFile(null)
+        setNeedsPassword(false)
+        setPdfError('Couldn’t read that PDF. Try pasting the statement text instead.')
+      }
+    } finally {
+      setExtracting(false)
+    }
+  }
+
   const handleFile = async (file: File | undefined) => {
     if (!file) return
-    setText(await file.text())
+    const isPdf = file.type === 'application/pdf' || /\.pdf$/i.test(file.name)
+    if (isPdf) {
+      setNeedsPassword(false)
+      setPdfPassword('')
+      await runPdfExtraction(file)
+    } else {
+      setPdfError(null)
+      setNeedsPassword(false)
+      setText(await file.text())
+    }
+  }
+
+  const submitPassword = async () => {
+    if (pdfFile) await runPdfExtraction(pdfFile, pdfPassword)
   }
 
   const toggle = (ref: string) => {
@@ -73,7 +122,10 @@ export function StatementImportPanel({
     })
   }
 
-  const selectedCandidates = result?.candidates.filter((c) => selected.has(c.mpesaRef)) ?? []
+  const selectedCandidates = useMemo(
+    () => result?.candidates.filter((c) => selected.has(c.mpesaRef)) ?? [],
+    [result, selected],
+  )
   const totals = useMemo(() => {
     let inCents = 0
     let outCents = 0
@@ -106,20 +158,20 @@ export function StatementImportPanel({
     <div className="space-y-5">
       <Card className="space-y-3">
         <p className="text-[13px] leading-snug text-ink-600">
-          Open your M-PESA full statement, select the transactions table, and paste it here. We’ll find the
-          transactions and let you review them before anything is saved.
+          Upload your M-PESA statement PDF — we’ll read it on your device — or paste the transactions table below.
+          You’ll review everything before anything is saved.
         </p>
         <textarea
           value={text}
           onChange={(e) => setText(e.target.value)}
           rows={5}
-          placeholder="Paste your statement here…"
+          placeholder="…or paste your statement here"
           aria-label="Statement text"
           className="w-full rounded-card bg-paper-0 p-3 text-[13px] text-ink-900 placeholder:text-ink-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral-600"
         />
         <div className="flex flex-wrap gap-2">
-          <Button variant="secondary" onClick={() => fileRef.current?.click()}>
-            Upload .txt / .csv
+          <Button variant="secondary" onClick={() => fileRef.current?.click()} loading={extracting}>
+            Upload PDF / .txt / .csv
           </Button>
           <Button onClick={handleParse} disabled={text.trim().length === 0}>
             Find transactions
@@ -127,11 +179,39 @@ export function StatementImportPanel({
           <input
             ref={fileRef}
             type="file"
-            accept=".txt,.csv,text/plain,text/csv"
+            accept=".pdf,.txt,.csv,application/pdf,text/plain,text/csv"
             className="hidden"
             onChange={(e) => void handleFile(e.target.files?.[0])}
           />
         </div>
+
+        {extracting && <p className="text-[13px] text-ink-600">Reading your statement…</p>}
+
+        {needsPassword && (
+          <div className="space-y-2 rounded-card bg-paper-0 p-3">
+            <p className="text-[13px] text-ink-600">
+              This statement is password-protected. Enter the password M-PESA sent to your phone — it stays on your
+              device.
+            </p>
+            <div className="flex gap-2">
+              <input
+                type="password"
+                value={pdfPassword}
+                onChange={(e) => setPdfPassword(e.target.value)}
+                autoComplete="off"
+                aria-label="Statement password"
+                placeholder="Statement password"
+                className="h-11 flex-1 rounded-card bg-paper-50 px-3 text-[14px] text-ink-900 placeholder:text-ink-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral-600"
+              />
+              <Button onClick={() => void submitPassword()} loading={extracting} disabled={pdfPassword.length === 0}>
+                Unlock
+              </Button>
+            </div>
+            {pdfError && <p className="text-[12.5px] text-coral-600">{pdfError}</p>}
+          </div>
+        )}
+
+        {pdfError && !needsPassword && <p className="text-[12.5px] text-coral-600">{pdfError}</p>}
       </Card>
 
       {result && result.candidates.length === 0 && (

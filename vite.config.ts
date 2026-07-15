@@ -57,6 +57,12 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2}'],
+        // Keep the on-demand statement-PDF path out of the precache (F5): pdf.js
+        // (~425 kB chunk + ~1.25 MB worker) is lazy-loaded only when a user
+        // imports a PDF, so precaching it would tax every install on a data
+        // budget for a feature most sessions never touch. It's fetched (and
+        // HTTP-cached) at first use instead.
+        globIgnores: ['**/pdf*', '**/pdfText*'],
       },
       devOptions: {
         enabled: false,

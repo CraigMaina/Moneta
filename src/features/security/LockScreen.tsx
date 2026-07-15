@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useSignOut } from '../settings/useSignOut'
 import { verifyBiometric } from './biometrics'
-import { getBiometricConfig, getPinRecord, type BiometricConfig } from './lockStorage'
+import { clearAllLockData, getBiometricConfig, getPinRecord, type BiometricConfig } from './lockStorage'
 import { useLockStore } from './lockStore'
 import { PIN_LENGTH, PinPad } from './PinPad'
 import type { PinRecord } from './pinCrypto'
@@ -60,7 +60,6 @@ export function LockScreen() {
   const handleForgot = async () => {
     // Sign out AND clear the device lock — the user re-authenticates with their
     // account, which is the genuine access control; the PIN was a local gate.
-    const { clearAllLockData } = await import('./lockStorage')
     await clearAllLockData()
     await refresh()
     await signOut()

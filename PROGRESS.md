@@ -370,4 +370,8 @@ Paste/upload an M-PESA statement, review parsed rows, batch-import with dedupe. 
 
 Extracted the parse/review/import into a shared `features/import/StatementImportPanel.tsx` (used by the `/import` route and onboarding). Onboarding's final step is now "Start already up to date" — paste a statement to import recent transactions so the app opens with real balances + safe-to-spend (replaces the single-message paste step; still skippable). Panel shows a money-in/out summary. Typecheck + lint clean, **467 tests**.
 
-**All requested features (F1, F5, F6, F7, F8, F9, F10, F11, F12, F13) delivered.** Deferred/noted: Sunday Wrapped review + Web Push (F8), true auth-user deletion (F11), in-browser PDF extraction (F5 — v1 takes pasted/uploaded statement text; parser is extraction-agnostic).
+### Statement PDF auto-extraction (client-side)
+
+Added `pdfjs-dist` (lazy-imported, excluded from PWA precache — 425 kB chunk + 1.25 MB worker only load on actual PDF import). `features/import/pdfLines.ts` (pure, tested: regroups positioned fragments into lines) + `pdfText.ts` (pdf.js glue: extract text, password-protected flow via `PdfPasswordError`). Panel now accepts PDF upload, prompts for the phone-sent statement password (on-device, never stored), extracts → parses → reviews. Build verified: pdf chunks code-split + out of precache. **470 tests** (3 new), typecheck + lint + build all clean.
+
+**All requested features (F1, F5, F6, F7, F8, F9, F10, F11, F12, F13) delivered.** Deferred/noted: Sunday Wrapped review + Web Push (F8), true auth-user deletion (F11). PDF row-reconstruction heuristic still wants validation against a real (redacted) statement.
