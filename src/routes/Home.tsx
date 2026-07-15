@@ -12,6 +12,7 @@ import { ReceiptIcon, SettingsIcon } from '../components/ui/icons'
 import { SafeToSpendHero } from '../components/ui/SafeToSpendHero'
 import { TabBar } from '../components/ui/TabBar'
 import { AddTransactionSheet } from '../features/transactions/AddTransactionSheet'
+import { DailyCard } from '../features/habits/DailyCard'
 import { UpcomingBills } from '../features/recurring/UpcomingBills'
 import { toNairobiDateString } from '../features/transactions/nairobiDate'
 import { useAccountBalances, useCategories, useTransactions } from '../features/transactions/queries'
@@ -23,8 +24,8 @@ import { useUiStore } from '../store/uiStore'
 /**
  * Home (PRD screen 1). The safe-to-spend hero is the signature element and
  * carries the screen; balances and recent activity stay quiet around it
- * (CLAUDE.md "Signature"). The streak chip and morning-minute card are later
- * phases — omitted rather than faked, per the brief.
+ * (CLAUDE.md "Signature"). The DailyCard (streak + morning money minute, PRD
+ * F8) sits just under the hero.
  */
 export function Home() {
   const activeSheet = useUiStore((state) => state.activeSheet)
@@ -81,6 +82,10 @@ export function Home() {
 
         <section className="mt-6">
           <HeroSection />
+        </section>
+
+        <section className="mt-6">
+          <DailyCard />
         </section>
 
         <section className="mt-6 empty:hidden">

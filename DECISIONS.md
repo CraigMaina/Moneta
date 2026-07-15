@@ -333,3 +333,12 @@ Dev/tooling:
 - **Every step is skippable and writes are batched at "finish"** (not per step), so skipping a step simply doesn't write it — matching PRD F1 "skipped inputs produce sensible defaults". Bills → `recurring_items` (monthly, due today, on the default account); goal → `goals`; income → `profiles.expected_income_cents`.
 - **The paste step reuses `PasteToParseFlow` wholesale** — the same paste→parse→confirm→save the Add sheet uses — rather than a bespoke onboarding parser, so the wow-moment is the real thing.
 - **On a profile-load error the gate falls through to the app** rather than trapping the user in a splash (RLS still protects data; they can retry inside).
+
+## Habit engine — logging streak (F8)
+
+- **Scoped to the daily-engagement core for this pass:** the logging streak + the Home "morning money minute" surface. The Sunday Wrapped review and Web Push reminders are deferred (both need notification infra) rather than faked — noted here so the omission is deliberate.
+- **Streak logic is pure and I/O-free (`src/lib/streaks.ts`), exhaustively tested.** `countDay(state, today)` decides the new counter; `streakView` decides how it reads. The `streakData.ts` hooks only do Supabase I/O. Same pure-core/thin-I/O split as safe-to-spend and goalMath.
+- **A day counts when the user logs ≥1 transaction OR confirms "no spend today"** (PRD F8). `DailyCard` auto-counts the day (a guarded, once-per-mount effect) the moment it sees a transaction dated today; when there's no activity it shows a single "No spend today" button. Both paths call the same `countDay` mutation.
+- **Weekly streak freeze: one missed day per week is auto-forgiven** (habit research — brittle streaks drive abandonment). Freezes reset at the Monday start of each Nairobi week. A gap of >1 missed day, or a second gap in the same week, resets the streak to 1 (longest is always preserved). All day/week boundaries are Nairobi calendar math on `yyyy-MM-dd`, never raw instants.
+- **The `streaks` row is 1:1 with the user (`unique(user_id)`) but NOT seeded at signup** — reads use `maybeSingle` and treat a null row as the zero state; the count mutation upserts `onConflict: user_id`. So a brand-new user has no streak row until their first counted day, and nothing errors before then.
+- **The DailyCard renders a calm skeleton while loading and `null` on error** — like UpcomingBills, it's a supplementary Home surface, so it never adds an error/empty card to Home. It never scolds: a broken/absent streak reads as "Start a streak today", not a loss.

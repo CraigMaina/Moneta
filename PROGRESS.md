@@ -306,3 +306,13 @@ recurring_items already existed (RLS complete) and already fed safe-to-spend via
 - `OnboardingGate.tsx` — gates the app on the completion flag; wired inside SessionGate in App.tsx.
 
 **Next (user batch):** F8 habits, F9 nudges, F11 app-lock/delete, F13 CSV export, F12 offline queue, F5 statement import.
+
+## Habit engine — F8 (lead)
+
+Logging streak + Home "morning money minute". `streaks` table already existed (RLS complete, 1:1 per user, not seeded). Typecheck + lint clean, **439 tests** (10 new). Sunday Wrapped review + Web Push reminders deferred (need notification infra) — noted in DECISIONS, not faked.
+
+- `lib/streaks.ts` — pure, exhaustively tested: `countDay` (extend / weekly-freeze / reset, Nairobi week math), `streakView` (countedToday/atRisk), `daysBetween`.
+- Data: `features/habits/streakData.ts` — `useStreak` (maybeSingle, null = zero state), `useCountStreakDay` (reads, applies `countDay`, upserts onConflict user_id, seeds cache on success).
+- UI: `features/habits/DailyCard.tsx` — streak flame + count, morning-minute line (yesterday's spend), auto-counts on today's activity, "No spend today" button otherwise; skeleton while loading, null on error. Wired into Home under the hero.
+
+**Next (user batch):** F9 nudges, F11 app-lock/delete, F13 CSV export, F12 offline queue, F5 statement import.

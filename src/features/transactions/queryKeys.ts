@@ -38,6 +38,10 @@ export const merchantRuleKeys = {
   all: (userId: string | undefined) => ['merchantRules', userId] as const,
 }
 
+export const streakKeys = {
+  detail: (userId: string | undefined) => ['streak', userId] as const,
+}
+
 export const goalKeys = {
   all: (userId: string | undefined) => ['goals', userId] as const,
 }
