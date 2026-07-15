@@ -28,7 +28,7 @@ import { PasteToParse, type PasteToParseStatus } from '../features/parser/PasteT
 import type { ParsedMpesaMessage } from '../parser/types'
 
 /**
- * `/kitchen-sink` — the visual QA surface for every design-system primitive,
+ * `/kitchen-sink`: the visual QA surface for every design-system primitive,
  * in every state, at 390x844. Not linked from the tab bar; direct-URL only.
  */
 export function KitchenSink() {
@@ -45,7 +45,7 @@ export function KitchenSink() {
       <div className="mx-auto max-w-md px-4 pt-8">
         <h1 className="font-display text-[32px] font-semibold tracking-tight text-ink-900">Kitchen sink</h1>
         <p className="mt-1 text-[15px] text-ink-600">
-          Every primitive, every state. Direct-URL only — not in the tab bar.
+          Every primitive, every state. Direct-URL only: not in the tab bar.
         </p>
 
         <ButtonSection demoLoading={demoLoading} onSimulateLoading={handleSimulateLoading} />
@@ -89,7 +89,7 @@ function ButtonSection({ demoLoading, onSimulateLoading }: { demoLoading: boolea
           <Button variant="ghost">Ghost</Button>
         </div>
         <p className="mt-2 text-[12.5px] text-ink-600">
-          No destructive variant — CLAUDE.md has no danger/error token distinct from coral (the primary-action
+          No destructive variant: CLAUDE.md has no danger/error token distinct from coral (the primary-action
           color). See DECISIONS.md.
         </p>
       </div>
@@ -155,7 +155,7 @@ function SheetSection({ open, onOpen, onClose }: { open: boolean; onOpen: () => 
       <Button onClick={onOpen}>Open sheet</Button>
       <Sheet open={open} onClose={onClose} title="Add expense">
         <p className="text-[15px] text-ink-600">
-          Drag down, tap outside, or press Escape to dismiss. No <code>&lt;form&gt;</code> here — buttons + handlers
+          Drag down, tap outside, or press Escape to dismiss. No <code>&lt;form&gt;</code> here: buttons + handlers
           only.
         </p>
         <div className="mt-5 flex gap-3">
@@ -236,7 +236,7 @@ function AmountDisplaySection() {
           <AmountDisplay cents={128000} size="body" tone="warning" />
         </div>
         <p className="mt-2 text-[12.5px] text-ink-600">
-          Expenses stay in ink-900 (calm, not alarming) — warning (amber-600) is reserved for actual warning contexts,
+          Expenses stay in ink-900 (calm, not alarming): warning (amber-600) is reserved for actual warning contexts,
           not routine spend. See DECISIONS.md.
         </p>
       </div>
@@ -249,7 +249,7 @@ function KeypadSection() {
   return (
     <Section title="Keypad">
       <div>
-        <Label>Live — running value it produces</Label>
+        <Label>Live: running value it produces</Label>
         <Card className="mt-2">
           <Keypad onChange={setCents} />
         </Card>
@@ -277,7 +277,7 @@ function CategoryChipSection() {
   return (
     <Section title="CategoryChip">
       <div>
-        <Label>Horizontal scroller — most-used first</Label>
+        <Label>Horizontal scroller: most-used first</Label>
         <div className="mt-2 flex gap-2 overflow-x-auto pb-1">
           {DEMO_CATEGORIES.map((category) => (
             <CategoryChip
@@ -315,19 +315,19 @@ function SafeToSpendHeroSection() {
   return (
     <Section title="SafeToSpendHero">
       <div>
-        <Label>Healthy — positive, mid-range</Label>
+        <Label>Healthy: positive, mid-range</Label>
         <Card className="mt-2 flex justify-center py-8">
           <SafeToSpendHero safeToSpendCents={140000} spentTodayCents={20000} dailyBudgetCents={50000} />
         </Card>
       </div>
       <div>
-        <Label>Near-zero — still positive, low daily allowance left</Label>
+        <Label>Near-zero: still positive, low daily allowance left</Label>
         <Card className="mt-2 flex justify-center py-8">
           <SafeToSpendHero safeToSpendCents={150} spentTodayCents={48000} dailyBudgetCents={50000} />
         </Card>
       </div>
       <div>
-        <Label>Negative — over this month, calm amber, no shame</Label>
+        <Label>Negative: over this month, calm amber, no shame</Label>
         <Card className="mt-2 flex justify-center py-8">
           <SafeToSpendHero safeToSpendCents={-34000} spentTodayCents={50000} dailyBudgetCents={50000} />
         </Card>
@@ -345,7 +345,7 @@ function TabBarSection({ onAddPress }: { onAddPress: () => void }) {
   return (
     <Section title="TabBar">
       <div>
-        <Label>Static gallery — one active state per row</Label>
+        <Label>Static gallery: one active state per row</Label>
         <div className="mt-2 space-y-3">
           {GALLERY_TABS.map((tab) => (
             <div key={tab}>
@@ -358,7 +358,7 @@ function TabBarSection({ onAddPress }: { onAddPress: () => void }) {
       <div>
         <Label>Live instance (fixed, bottom of viewport, real routes)</Label>
         <p className="mt-1 text-[12.5px] text-ink-600">
-          The Add button opens the Sheet demo above. Navigating a tab leaves this page — re-enter the URL to come
+          The Add button opens the Sheet demo above. Navigating a tab leaves this page: re-enter the URL to come
           back.
         </p>
       </div>
@@ -369,10 +369,10 @@ function TabBarSection({ onAddPress }: { onAddPress: () => void }) {
 
 /*
  * Parse-confirmation gallery (Phase 3, design-engineer). Self-contained demo
- * data below — deliberately NOT imported from `src/parser/__fixtures__`
+ * data below: deliberately NOT imported from `src/parser/__fixtures__`
  * (test-only fixtures), so this gallery stays independent of the parser's
  * own test corpus. Every ParseConfirmationCard/ParseTransform/PasteToParse
- * prop here is a callback — no data hooks, matching how the lead will
+ * prop here is a callback: no data hooks, matching how the lead will
  * compose them into the real Add sheet.
  */
 
@@ -448,7 +448,7 @@ function ParserSection() {
   return (
     <Section title="Parser: parse-confirmation">
       <div>
-        <Label>Card — expense, categorized, with a "Sync balance" affordance</Label>
+        <Label>Card: expense, categorized, with a "Sync balance" affordance</Label>
         <ParseConfirmationCard
           className="mt-2"
           parsed={DEMO_EXPENSE_WITH_CATEGORY}
@@ -461,7 +461,7 @@ function ParserSection() {
       </div>
 
       <div>
-        <Label>Card — null category shows the "Pick a category" prompt</Label>
+        <Label>Card: null category shows the "Pick a category" prompt</Label>
         <ParseConfirmationCard
           className="mt-2"
           parsed={DEMO_EXPENSE_NULL_CATEGORY}
@@ -473,7 +473,7 @@ function ParserSection() {
       </div>
 
       <div>
-        <Label>Card — withdrawal: transfer + a separate fee line, never a single expense</Label>
+        <Label>Card: withdrawal: transfer + a separate fee line, never a single expense</Label>
         <ParseConfirmationCard
           className="mt-2"
           parsed={DEMO_WITHDRAWAL}
@@ -485,7 +485,7 @@ function ParserSection() {
       </div>
 
       <div>
-        <Label>Card — saving (disabled, loading "Log it")</Label>
+        <Label>Card: saving (disabled, loading "Log it")</Label>
         <ParseConfirmationCard
           className="mt-2"
           parsed={DEMO_EXPENSE_WITH_CATEGORY}
@@ -498,7 +498,7 @@ function ParserSection() {
       </div>
 
       <div>
-        <Label>ParseTransform — the raw SMS -&gt; card wow moment</Label>
+        <Label>ParseTransform: the raw SMS -&gt; card wow moment</Label>
         <div className="mt-2 rounded-card bg-paper-50 p-3">
           <ParseTransform rawText={DEMO_EXPENSE_WITH_CATEGORY.rawText} parsed={transformParsed}>
             <ParseConfirmationCard
@@ -519,7 +519,7 @@ function ParserSection() {
       </div>
 
       <div>
-        <Label>PasteToParse — idle / pending / unparseable fallback</Label>
+        <Label>PasteToParse: idle / pending / unparseable fallback</Label>
         <Card className="mt-2 space-y-3">
           <div className="flex flex-wrap gap-2">
             <Button variant="secondary" size="md" onClick={() => setPasteStatus('idle')}>

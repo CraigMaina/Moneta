@@ -112,7 +112,7 @@ export function Goals() {
               <EmptyState
                 icon={<GoalsIcon />}
                 title="No goals yet"
-                description="Set something to save for — a deposit, a trip, a rainy-day fund — and watch it fill up."
+                description="Set something to save for, like a deposit, a trip, or a rainy-day fund, and watch it fill up."
                 actionLabel="Create a goal"
                 onAction={openCreate}
               />

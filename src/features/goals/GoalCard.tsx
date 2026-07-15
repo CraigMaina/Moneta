@@ -27,7 +27,7 @@ export interface GoalCardProps {
 }
 
 function projectionLine(goal: Goal, projection: GoalProjection): string {
-  if (projection.status === 'reached') return 'Reached — nicely done'
+  if (projection.status === 'reached') return 'Reached. Nicely done'
   if (projection.status === 'no-rate') {
     return goal.target_date ? `Target ${formatDate(goal.target_date)}` : 'Add a little to see your finish date'
   }

@@ -60,7 +60,7 @@ export function DailyCard() {
   const streakLabel =
     view.currentCount === 0
       ? 'Start a streak today'
-      : `${view.currentCount}-day streak${view.countedToday ? '' : ' — keep it going'}`
+      : `${view.currentCount}-day streak${view.countedToday ? '' : ', keep it going'}`
 
   return (
     <Card>

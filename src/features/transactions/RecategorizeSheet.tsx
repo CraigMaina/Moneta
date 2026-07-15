@@ -69,7 +69,7 @@ export function RecategorizeSheet({ transaction, onClose }: RecategorizeSheetPro
               </Button>
             </div>
           ) : relevantCategories.length === 0 ? (
-            <p className="text-[15px] text-ink-600">No categories yet — nothing to recategorize into.</p>
+            <p className="text-[15px] text-ink-600">No categories yet. Nothing to recategorize into.</p>
           ) : (
             <CategoryPicker
               categories={relevantCategories}

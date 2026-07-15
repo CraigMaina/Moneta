@@ -53,7 +53,7 @@ export function Budgets() {
         </header>
 
         <p className="mt-1 text-[13px] leading-snug text-ink-600">
-          Set a monthly cap per category. Track your progress on Insights — switch to the weekly view there to see
+          Set a monthly cap per category. Track your progress on Insights, switching to the weekly view there to see
           the weekly slice of each cap.
         </p>
 

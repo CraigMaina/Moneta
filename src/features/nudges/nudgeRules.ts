@@ -148,7 +148,7 @@ function categoryPaceNudges(input: NudgeInputs): Nudge[] {
       kind: 'category-pace',
       tone: 'warning',
       title: `${label} is running high`,
-      body: `You've spent ${formatKES(mtd)} on ${label} this month — about ${Math.round(
+      body: `You've spent ${formatKES(mtd)} on ${label} this month, about ${Math.round(
         fraction * 100,
       )}% of your usual, and it's only the ${ordinal(dayOfMonth)}.`,
     })

@@ -45,7 +45,7 @@ export function BudgetsCard({
 
       {budgets.length === 0 ? (
         <p className="mt-2 text-[15px] text-ink-600">
-          Set a cap for a category — say Food or Transport — and track it here each {granularity === 'week' ? 'week' : 'month'}.
+          Set a cap for a category, say Food or Transport, and track it here each {granularity === 'week' ? 'week' : 'month'}.
         </p>
       ) : (
         <ul className="mt-3 space-y-3.5">

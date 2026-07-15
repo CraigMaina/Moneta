@@ -92,7 +92,7 @@ export function SignIn() {
         ) : (
           <div className="mt-8">
             <p className="text-[15px] text-ink-900">
-              Check <span className="font-semibold">{email.trim()}</span> — tap the link, or enter the 6-digit code.
+              Check <span className="font-semibold">{email.trim()}</span>. Tap the link, or enter the 6-digit code.
             </p>
             <label htmlFor="signin-code" className="mt-6 block text-[12.5px] font-semibold uppercase tracking-wide text-ink-600">
               6-digit code

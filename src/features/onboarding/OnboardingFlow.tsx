@@ -166,7 +166,7 @@ function WelcomeStep({ onStart, onSkip }: { onStart: () => void; onSkip: () => v
           Know what you can spend, every day.
         </h1>
         <p className="mt-3 text-[15px] text-ink-600">
-          A quick setup — your income, a few regular bills, one thing you&apos;re saving for — and Moneta gives you a
+          A quick setup: your income, a few regular bills, one thing you&apos;re saving for, and Moneta gives you a
           single safe-to-spend number.
         </p>
       </div>
@@ -228,7 +228,7 @@ function BillsStep({
 
   return (
     <div className="flex h-full flex-col">
-      <StepHeading title="Any regular bills?" subtitle="Rent, subscriptions, a Sacco standing order — these keep your number honest." />
+      <StepHeading title="Any regular bills?" subtitle="Rent, subscriptions, a Sacco standing order. These keep your number honest." />
 
       {bills.length > 0 && (
         <ul className="mb-4 space-y-2">
@@ -320,7 +320,7 @@ function StatementStep({ onDone, finishing }: { onDone: () => void; finishing: b
     <div className="flex h-full flex-col">
       <StepHeading
         title="Start already up to date"
-        subtitle="Paste your M-PESA statement to bring in your recent transactions — so Moneta opens with your real balances and safe-to-spend. Optional; you can also do this later in Settings."
+        subtitle="Paste your M-PESA statement to bring in your recent transactions, so Moneta opens with your real balances and safe-to-spend. Optional; you can also do this later in Settings."
       />
       <div className="flex-1">
         <StatementImportPanel importLabel="Import & finish" onImported={onDone} />

@@ -352,7 +352,7 @@ function CategorySection({
       ) : query.isError ? (
         <InlineRetry message="Couldn't load categories." onRetry={query.refetch} />
       ) : categories.length === 0 ? (
-        <p className="mt-2 text-[15px] text-ink-600">No categories yet — this entry will be uncategorized.</p>
+        <p className="mt-2 text-[15px] text-ink-600">No categories yet. This entry will be uncategorized.</p>
       ) : (
         <CategoryPicker categories={categories} selectedId={selectedId} onSelect={onSelect} />
       )}

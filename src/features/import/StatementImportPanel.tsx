@@ -94,7 +94,7 @@ export function StatementImportPanel({
       if (extracted.trim().length === 0) {
         // A text layer we couldn't read anything from — almost always a scanned
         // / image-only PDF rather than a real text statement.
-        setPdfError('We couldn’t read any text from that PDF — it may be a scanned image rather than a text statement.')
+        setPdfError('We couldn’t read any text from that PDF. It may be a scanned image rather than a text statement.')
         setResult({ candidates: [], skippedZero: 0, skippedStatus: 0 })
         return
       }
@@ -169,7 +169,7 @@ export function StatementImportPanel({
           })
           onImported?.(res)
         },
-        onError: () => showToast({ title: "Couldn't import — try again", variant: 'warn' }),
+        onError: () => showToast({ title: "Couldn't import. Try again", variant: 'warn' }),
       },
     )
   }
@@ -178,7 +178,7 @@ export function StatementImportPanel({
     <div className="space-y-5">
       <Card className="space-y-3">
         <p className="text-[13px] leading-snug text-ink-600">
-          Upload your M-PESA statement PDF — we’ll read it on your device — or paste the transactions table below.
+          Upload your M-PESA statement PDF (we’ll read it on your device) or paste the transactions table below.
           You’ll review everything before anything is saved.
         </p>
         <textarea
@@ -210,7 +210,7 @@ export function StatementImportPanel({
         {needsPassword && (
           <div className="space-y-2 rounded-card bg-paper-0 p-3">
             <p className="text-[13px] text-ink-600">
-              This statement is password-protected. Enter the password M-PESA sent to your phone — it stays on your
+              This statement is password-protected. Enter the password M-PESA sent to your phone. It stays on your
               device.
             </p>
             <div className="flex gap-2">
@@ -322,7 +322,7 @@ export function StatementImportPanel({
                 onClick={() => setShowAll(true)}
                 className="w-full px-4 py-3 text-[13px] font-semibold text-coral-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral-600"
               >
-                Show all {result.candidates.length.toLocaleString()} — {result.candidates.length - ROW_RENDER_CAP} more
+                Show all {result.candidates.length.toLocaleString()} ({result.candidates.length - ROW_RENDER_CAP} more)
               </button>
             )}
           </Card>

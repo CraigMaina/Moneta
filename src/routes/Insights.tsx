@@ -366,7 +366,7 @@ function FeesSpotlight({ feesCents, expenseCents, periodNoun }: { feesCents: num
             <AmountDisplay cents={-feesCents} tone="expense" size="title" />
           </p>
           <p className="mt-1 text-[15px] text-ink-600">
-            Transaction and Fuliza charges this {periodNoun}{pct > 0 ? ` — ${pct}% of your spending` : ''}.
+            Transaction and Fuliza charges this {periodNoun}{pct > 0 ? `, ${pct}% of your spending` : ''}.
           </p>
         </>
       ) : (

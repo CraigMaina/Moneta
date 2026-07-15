@@ -156,7 +156,7 @@ export function PasteToParseFlow({ onClose, onFallbackToManual, initialText }: P
           } else {
             showToast({
               title: "Couldn't find the original",
-              description: "We don't have that transaction — adjust it by hand if you need to.",
+              description: "We don't have that transaction. Adjust it by hand if you need to.",
               variant: 'warn',
             })
           }

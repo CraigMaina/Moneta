@@ -55,7 +55,7 @@ function ConfirmBody({ onClose }: { onClose: () => void }) {
         onClose()
         navigate('/')
       },
-      onError: () => showToast({ title: "Couldn't delete everything — try again", variant: 'warn' }),
+      onError: () => showToast({ title: "Couldn't delete everything. Try again", variant: 'warn' }),
     })
   }
 
