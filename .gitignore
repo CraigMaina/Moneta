@@ -40,3 +40,7 @@ supabase/.branches
 # Claude / assistant files (excluded from repo)
 .claude/
 CLAUDE.md
+
+# Local working docs (kept out of the repo)
+DECISIONS.md
+PROGRESS.md
