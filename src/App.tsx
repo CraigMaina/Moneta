@@ -8,6 +8,7 @@ import { Settings } from './routes/Settings'
 import { Recurring } from './routes/Recurring'
 import { KitchenSink } from './routes/KitchenSink'
 import { ToastProvider } from './components/ui/Toast'
+import { OfflineBanner } from './features/offline/OfflineBanner'
 import { SessionGate } from './features/auth/SessionGate'
 import { OnboardingGate } from './features/onboarding/OnboardingGate'
 import { LockGate } from './features/security/LockGate'
@@ -15,6 +16,7 @@ import { LockGate } from './features/security/LockGate'
 export function App() {
   return (
     <ToastProvider>
+      <OfflineBanner />
       <Routes>
         {/* Direct-URL only, not in the tab bar — the primitive-kit visual QA
             surface. Kept outside the session gate so primitives can be reviewed

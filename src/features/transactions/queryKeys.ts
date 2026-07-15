@@ -55,3 +55,15 @@ export const recurringItemKeys = {
   upcomingBills: (userId: string | undefined, fromDate: string, toDate: string) =>
     ['recurringItems', userId, 'upcomingBills', fromDate, toDate] as const,
 }
+
+/**
+ * Stable mutation keys for the write paths we want to survive a reload while
+ * offline (PRD F12). A key lets `setMutationDefaults` supply a `mutationFn` when
+ * TanStack rehydrates a paused mutation whose original closure is gone — see
+ * `features/offline/mutationDefaults.ts`. NOT namespaced by userId: the resumed
+ * mutationFn reads the live session itself.
+ */
+export const mutationKeys = {
+  addTransaction: ['addTransaction'] as const,
+  saveParsedTransactions: ['saveParsedTransactions'] as const,
+}

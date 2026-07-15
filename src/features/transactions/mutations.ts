@@ -2,7 +2,7 @@ import { useMutation, useQueryClient, type QueryClient } from '@tanstack/react-q
 import { supabase } from '../../lib/supabase'
 import { applyBalanceDeltas, negateDeltas, transactionBalanceDeltas } from './balanceDelta'
 import { useAuthUserId } from './hooks/useAuthUserId'
-import { accountBalanceKeys, transactionKeys } from './queryKeys'
+import { accountBalanceKeys, mutationKeys, transactionKeys } from './queryKeys'
 import { addTransactionSchema, updateTransactionSchema, type AddTransactionInput, type UpdateTransactionInput } from './schemas'
 import type { AccountBalance, Transaction } from './types'
 
@@ -82,21 +82,31 @@ function rollback(queryClient: QueryClient, userId: string | undefined, context:
   }
 }
 
+/**
+ * The network write for a single add, factored out so it backs BOTH the live
+ * `useAddTransaction` mutationFn and the cross-reload resume default
+ * (`features/offline/mutationDefaults.ts`) — one source of truth for the insert.
+ */
+export async function performAddTransaction(userId: string, input: AddTransactionInput): Promise<Transaction> {
+  const parsed = addTransactionSchema.parse(input)
+  const { data, error } = await supabase
+    .from('transactions')
+    .insert({ ...parsed, user_id: userId })
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
 export function useAddTransaction() {
   const queryClient = useQueryClient()
   const userId = useAuthUserId()
 
   return useMutation<Transaction, Error, AddTransactionInput, MutationContext>({
+    mutationKey: mutationKeys.addTransaction,
     mutationFn: async (input) => {
       if (!userId) throw new Error('useAddTransaction: no authenticated user')
-      const parsed = addTransactionSchema.parse(input)
-      const { data, error } = await supabase
-        .from('transactions')
-        .insert({ ...parsed, user_id: userId })
-        .select()
-        .single()
-      if (error) throw error
-      return data
+      return performAddTransaction(userId, input)
     },
     onMutate: async (input) => {
       const parsed = addTransactionSchema.parse(input)
@@ -162,37 +172,49 @@ export interface SaveParsedResult {
  * deduped (the server's view is the last word), so a re-paste flashes and
  * settles back to the single existing entry rather than persisting a copy.
  */
+/**
+ * The dedupe-and-insert network write for a parsed batch, factored out so it
+ * backs both the live hook and the cross-reload resume default. Re-checking
+ * `mpesa_ref` here (not just in the hook) means a resumed offline paste still
+ * can't create a duplicate (PRD §F2).
+ */
+export async function performSaveParsedTransactions(
+  userId: string,
+  inputRows: AddTransactionInput[],
+): Promise<SaveParsedResult> {
+  const rows = inputRows.map((row) => ({ ...addTransactionSchema.parse(row), user_id: userId }))
+
+  const refs = rows.map((row) => row.mpesa_ref).filter((ref): ref is string => Boolean(ref))
+  let existingRefs = new Set<string>()
+  if (refs.length > 0) {
+    const { data: existing, error: readError } = await supabase
+      .from('transactions')
+      .select('mpesa_ref')
+      .eq('user_id', userId)
+      .in('mpesa_ref', refs)
+    if (readError) throw readError
+    existingRefs = new Set((existing ?? []).map((row) => row.mpesa_ref).filter((ref): ref is string => Boolean(ref)))
+  }
+
+  const newRows = rows.filter((row) => !row.mpesa_ref || !existingRefs.has(row.mpesa_ref))
+  if (newRows.length === 0) {
+    return { inserted: [], duplicated: true }
+  }
+
+  const { data, error } = await supabase.from('transactions').insert(newRows).select()
+  if (error) throw error
+  return { inserted: data ?? [], duplicated: newRows.length < rows.length }
+}
+
 export function useSaveParsedTransactions() {
   const queryClient = useQueryClient()
   const userId = useAuthUserId()
 
   return useMutation<SaveParsedResult, Error, AddTransactionInput[], MutationContext>({
+    mutationKey: mutationKeys.saveParsedTransactions,
     mutationFn: async (inputRows) => {
       if (!userId) throw new Error('useSaveParsedTransactions: no authenticated user')
-      const rows = inputRows.map((row) => ({ ...addTransactionSchema.parse(row), user_id: userId }))
-
-      const refs = rows.map((row) => row.mpesa_ref).filter((ref): ref is string => Boolean(ref))
-      let existingRefs = new Set<string>()
-      if (refs.length > 0) {
-        const { data: existing, error: readError } = await supabase
-          .from('transactions')
-          .select('mpesa_ref')
-          .eq('user_id', userId)
-          .in('mpesa_ref', refs)
-        if (readError) throw readError
-        existingRefs = new Set(
-          (existing ?? []).map((row) => row.mpesa_ref).filter((ref): ref is string => Boolean(ref)),
-        )
-      }
-
-      const newRows = rows.filter((row) => !row.mpesa_ref || !existingRefs.has(row.mpesa_ref))
-      if (newRows.length === 0) {
-        return { inserted: [], duplicated: true }
-      }
-
-      const { data, error } = await supabase.from('transactions').insert(newRows).select()
-      if (error) throw error
-      return { inserted: data ?? [], duplicated: newRows.length < rows.length }
+      return performSaveParsedTransactions(userId, inputRows)
     },
     onMutate: async (inputRows) => {
       const rows = inputRows.map((row) => addTransactionSchema.parse(row))

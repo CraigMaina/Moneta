@@ -346,3 +346,13 @@ Client-side RFC 4180 export. Typecheck + lint clean, **461 tests** (7 new). No m
 - `ExportData.tsx` — builds from the loaded transaction cache (all rows) and downloads a UTF-8-BOM CSV (`moneta-transactions-YYYY-MM-DD.csv`); Settings → Data section. Disabled/teaching state when there's nothing to export.
 
 **Next (user batch):** F12 offline queue, F5 statement import.
+
+## Offline mutation queue — F12 (lead)
+
+Built on TanStack's pause/resume (optimistic mutations already in place). Typecheck + lint clean, **461 tests** (mutation helper extraction kept all existing tests green). No migration.
+
+- Refactor: `performAddTransaction` / `performSaveParsedTransactions` extracted from the hooks; both hooks gained stable `mutationKey`s.
+- `features/offline/mutationDefaults.ts` — `setMutationDefaults` for the two write keys (resume mutationFn reads live session; settle-time invalidation), registered in `main.tsx`; provider `onSuccess` → `resumePausedMutations()`.
+- `useOnlineStatus` / `usePendingSyncCount` (via `onlineManager` + `useMutationState`, `useSyncExternalStore`); `OfflineBanner` slim fixed top banner wired into App.
+
+**Next (user batch):** F5 statement import.
