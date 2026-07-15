@@ -4,48 +4,70 @@ import { Button } from '../../components/ui/Button'
 import { useToast } from '../../components/ui/Toast'
 
 /**
- * Email sign-in — the v1 email path (PRD F1). Two steps, buttons + handlers
- * only (no HTML `<form>`, per CLAUDE.md). Step 1 sends a magic link + 6-digit
- * code via `signInWithOtp`; step 2 verifies the code with `verifyOtp`. Clicking
- * the emailed link also signs in (the Supabase client's `detectSessionInUrl`
- * handles the redirect), so the code entry is a convenience, not the only path.
+ * Email + password sign-in and account creation (PRD F1). Buttons + handlers
+ * only, no HTML `<form>` (CLAUDE.md). Password auth (not the earlier magic-link
+ * / OTP flow) so signing in sends no email and never hits the email rate limit.
  *
- * Voice: warm, plain, no jargon. Moneta warns and remembers; sign-in is calm.
+ * `signInWithPassword` logs an existing user in; `signUp` creates one. If the
+ * Supabase project has "Confirm email" enabled, `signUp` returns a user with no
+ * session (a confirmation email is sent) and we tell the user to confirm; if it
+ * is disabled, `signUp` returns a session and `onAuthStateChange` signs them
+ * straight in. Voice stays warm and plain.
  */
 export function SignIn() {
   const { showToast } = useToast()
-  const [step, setStep] = useState<'email' | 'code'>('email')
+  const [mode, setMode] = useState<'signin' | 'signup'>('signin')
   const [email, setEmail] = useState('')
-  const [code, setCode] = useState('')
-  const [sending, setSending] = useState(false)
-  const [verifying, setVerifying] = useState(false)
+  const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
 
   const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())
+  // Supabase requires 6+; ask for 8+ on new accounts, accept any non-empty on sign-in.
+  const passwordValid = mode === 'signup' ? password.length >= 8 : password.length >= 1
+  const canSubmit = emailValid && passwordValid && !submitting
 
-  async function sendLink() {
-    if (!emailValid) return
-    setSending(true)
-    const { error } = await supabase.auth.signInWithOtp({
-      email: email.trim(),
-      options: { shouldCreateUser: true },
-    })
-    setSending(false)
-    if (error) {
-      showToast({ title: "Couldn't send the email", description: error.message, variant: 'warn' })
+  async function submit() {
+    if (!canSubmit) return
+    setSubmitting(true)
+    const credentials = { email: email.trim(), password }
+
+    if (mode === 'signup') {
+      const { data, error } = await supabase.auth.signUp(credentials)
+      setSubmitting(false)
+      if (error) {
+        const already = /already registered|already exists/i.test(error.message)
+        showToast({
+          title: already ? 'That email already has an account' : "Couldn't create your account",
+          description: already ? 'Try signing in instead.' : error.message,
+          variant: 'warn',
+        })
+        if (already) setMode('signin')
+        return
+      }
+      // Session present = confirmation is off, onAuthStateChange takes over.
+      // No session = a confirmation email was sent; nudge the user to confirm.
+      if (!data.session) {
+        showToast({
+          title: 'Account created',
+          description: 'Check your email to confirm, then sign in.',
+          variant: 'success',
+        })
+        setMode('signin')
+        setPassword('')
+      }
       return
     }
-    setStep('code')
-  }
 
-  async function verify() {
-    const token = code.trim()
-    if (token.length < 6) return
-    setVerifying(true)
-    const { error } = await supabase.auth.verifyOtp({ email: email.trim(), token, type: 'email' })
-    setVerifying(false)
+    const { error } = await supabase.auth.signInWithPassword(credentials)
+    setSubmitting(false)
     if (error) {
-      showToast({ title: "That code didn't work", description: 'Check the email and try again.', variant: 'warn' })
-      return
+      const badCreds = /invalid login credentials/i.test(error.message)
+      showToast({
+        title: badCreds ? 'Email or password is incorrect' : "Couldn't sign you in",
+        description: badCreds ? 'Check them and try again.' : error.message,
+        variant: 'warn',
+      })
     }
     // On success, onAuthStateChange flips the session and the gate renders the app.
   }
@@ -56,75 +78,73 @@ export function SignIn() {
         <h1 className="font-display text-[40px] font-semibold leading-none text-coral-600">Moneta</h1>
         <p className="mt-3 text-[15px] text-ink-600">Know what you can safely spend today.</p>
 
-        {step === 'email' ? (
-          <div className="mt-8">
-            <label htmlFor="signin-email" className="block text-[12.5px] font-semibold uppercase tracking-wide text-ink-600">
-              Email
-            </label>
+        <div className="mt-8">
+          <label htmlFor="signin-email" className="block text-[12.5px] font-semibold uppercase tracking-wide text-ink-600">
+            Email
+          </label>
+          <input
+            id="signin-email"
+            type="email"
+            inputMode="email"
+            autoComplete="email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            placeholder="you@example.com"
+            className="mt-2 h-12 w-full rounded-card bg-paper-50 px-4 text-[15px] text-ink-900 placeholder:text-ink-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral-600"
+          />
+
+          <label htmlFor="signin-password" className="mt-4 block text-[12.5px] font-semibold uppercase tracking-wide text-ink-600">
+            Password
+          </label>
+          <div className="relative mt-2">
             <input
-              id="signin-email"
-              type="email"
-              inputMode="email"
-              autoComplete="email"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
+              id="signin-password"
+              type={showPassword ? 'text' : 'password'}
+              autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
               onKeyDown={(event) => {
-                if (event.key === 'Enter') sendLink()
+                if (event.key === 'Enter') submit()
               }}
-              placeholder="you@example.com"
-              className="mt-2 h-12 w-full rounded-card bg-paper-50 px-4 text-[15px] text-ink-900 placeholder:text-ink-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral-600"
+              placeholder={mode === 'signup' ? 'At least 8 characters' : 'Your password'}
+              className="h-12 w-full rounded-card bg-paper-50 pl-4 pr-16 text-[15px] text-ink-900 placeholder:text-ink-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral-600"
             />
-            <Button
-              variant="primary"
-              size="lg"
-              fullWidth
-              className="mt-4"
-              disabled={!emailValid}
-              loading={sending}
-              onClick={sendLink}
+            <button
+              type="button"
+              onClick={() => setShowPassword((v) => !v)}
+              aria-label={showPassword ? 'Hide password' : 'Show password'}
+              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full px-2 py-1 text-[13px] font-semibold text-ink-600 hover:text-ink-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral-600"
             >
-              Email me a link
-            </Button>
-            <p className="mt-3 text-center text-[12.5px] text-ink-600">
-              We&apos;ll send a link and a 6-digit code. No password to remember.
-            </p>
+              {showPassword ? 'Hide' : 'Show'}
+            </button>
           </div>
-        ) : (
-          <div className="mt-8">
-            <p className="text-[15px] text-ink-900">
-              Check <span className="font-semibold">{email.trim()}</span>. Tap the link, or enter the 6-digit code.
-            </p>
-            <label htmlFor="signin-code" className="mt-6 block text-[12.5px] font-semibold uppercase tracking-wide text-ink-600">
-              6-digit code
-            </label>
-            <input
-              id="signin-code"
-              inputMode="numeric"
-              autoComplete="one-time-code"
-              value={code}
-              onChange={(event) => setCode(event.target.value.replace(/\D/g, '').slice(0, 6))}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter') verify()
+
+          <Button
+            variant="primary"
+            size="lg"
+            fullWidth
+            className="mt-5"
+            disabled={!canSubmit}
+            loading={submitting}
+            onClick={submit}
+          >
+            {mode === 'signup' ? 'Create account' : 'Sign in'}
+          </Button>
+
+          <p className="mt-4 text-center text-[13px] text-ink-600">
+            {mode === 'signup' ? 'Already have an account?' : 'New to Moneta?'}{' '}
+            <button
+              type="button"
+              onClick={() => {
+                setMode(mode === 'signup' ? 'signin' : 'signup')
+                setPassword('')
               }}
-              placeholder="000000"
-              className="mt-2 h-12 w-full rounded-card bg-paper-50 px-4 text-center text-[20px] font-semibold tracking-[0.3em] tabular-nums text-ink-900 placeholder:text-ink-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral-600"
-            />
-            <Button
-              variant="primary"
-              size="lg"
-              fullWidth
-              className="mt-4"
-              disabled={code.trim().length < 6}
-              loading={verifying}
-              onClick={verify}
+              className="font-semibold text-coral-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral-600"
             >
-              Verify and continue
-            </Button>
-            <Button variant="ghost" fullWidth className="mt-2" onClick={() => setStep('email')}>
-              Use a different email
-            </Button>
-          </div>
-        )}
+              {mode === 'signup' ? 'Sign in' : 'Create an account'}
+            </button>
+          </p>
+        </div>
       </div>
     </main>
   )

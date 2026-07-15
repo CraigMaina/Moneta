@@ -7,8 +7,8 @@ const mockSupabase = vi.hoisted(() => ({
   auth: {
     getSession: vi.fn(),
     onAuthStateChange: vi.fn(() => ({ data: { subscription: { unsubscribe: vi.fn() } } })),
-    signInWithOtp: vi.fn(),
-    verifyOtp: vi.fn(),
+    signInWithPassword: vi.fn(),
+    signUp: vi.fn(),
   },
 }))
 vi.mock('../../lib/supabase', () => ({ supabase: mockSupabase }))
@@ -30,55 +30,64 @@ beforeEach(() => {
 })
 
 describe('SignIn', () => {
-  it('sends an OTP for a valid email, then reveals the code step', async () => {
+  it('signs an existing user in with email and password', async () => {
     const user = userEvent.setup()
-    mockSupabase.auth.signInWithOtp.mockResolvedValue({ error: null })
+    mockSupabase.auth.signInWithPassword.mockResolvedValue({ data: { session: {} }, error: null })
     renderSignIn()
 
-    const sendButton = screen.getByRole('button', { name: 'Email me a link' })
-    expect(sendButton).toBeDisabled() // no email yet
+    const submit = screen.getByRole('button', { name: 'Sign in' })
+    expect(submit).toBeDisabled() // no email/password yet
 
     await user.type(screen.getByLabelText('Email'), 'wanjiru@example.com')
-    expect(sendButton).toBeEnabled()
-    await user.click(sendButton)
+    await user.type(screen.getByLabelText('Password'), 'sup3rsecret')
+    expect(submit).toBeEnabled()
+    await user.click(submit)
 
-    expect(mockSupabase.auth.signInWithOtp).toHaveBeenCalledWith({
+    expect(mockSupabase.auth.signInWithPassword).toHaveBeenCalledWith({
       email: 'wanjiru@example.com',
-      options: { shouldCreateUser: true },
+      password: 'sup3rsecret',
     })
-    expect(await screen.findByLabelText('6-digit code')).toBeInTheDocument()
   })
 
-  it('verifies the entered code with verifyOtp', async () => {
+  it('creates an account with signUp in create-account mode', async () => {
     const user = userEvent.setup()
-    mockSupabase.auth.signInWithOtp.mockResolvedValue({ error: null })
-    mockSupabase.auth.verifyOtp.mockResolvedValue({ data: { session: {} }, error: null })
+    mockSupabase.auth.signUp.mockResolvedValue({ data: { session: {}, user: {} }, error: null })
     renderSignIn()
 
+    await user.click(screen.getByRole('button', { name: 'Create an account' }))
     await user.type(screen.getByLabelText('Email'), 'kev@example.com')
-    await user.click(screen.getByRole('button', { name: 'Email me a link' }))
+    await user.type(screen.getByLabelText('Password'), 'longenoughpw')
+    await user.click(screen.getByRole('button', { name: 'Create account' }))
 
-    const codeInput = await screen.findByLabelText('6-digit code')
-    await user.type(codeInput, '123456')
-    await user.click(screen.getByRole('button', { name: 'Verify and continue' }))
-
-    expect(mockSupabase.auth.verifyOtp).toHaveBeenCalledWith({
+    expect(mockSupabase.auth.signUp).toHaveBeenCalledWith({
       email: 'kev@example.com',
-      token: '123456',
-      type: 'email',
+      password: 'longenoughpw',
     })
   })
 
-  it('only accepts up to 6 numeric digits in the code field', async () => {
+  it('requires at least 8 characters to create an account', async () => {
     const user = userEvent.setup()
-    mockSupabase.auth.signInWithOtp.mockResolvedValue({ error: null })
     renderSignIn()
-    await user.type(screen.getByLabelText('Email'), 'a@b.co')
-    await user.click(screen.getByRole('button', { name: 'Email me a link' }))
 
-    const codeInput = (await screen.findByLabelText('6-digit code')) as HTMLInputElement
-    await user.type(codeInput, '12ab3456789')
-    expect(codeInput.value).toBe('123456')
+    await user.click(screen.getByRole('button', { name: 'Create an account' }))
+    await user.type(screen.getByLabelText('Email'), 'a@b.co')
+    await user.type(screen.getByLabelText('Password'), 'short')
+    expect(screen.getByRole('button', { name: 'Create account' })).toBeDisabled()
+  })
+
+  it('shows a clear message on invalid sign-in credentials', async () => {
+    const user = userEvent.setup()
+    mockSupabase.auth.signInWithPassword.mockResolvedValue({
+      data: { session: null },
+      error: { message: 'Invalid login credentials' },
+    })
+    renderSignIn()
+
+    await user.type(screen.getByLabelText('Email'), 'a@b.co')
+    await user.type(screen.getByLabelText('Password'), 'wrongpass')
+    await user.click(screen.getByRole('button', { name: 'Sign in' }))
+
+    expect(await screen.findByText('Email or password is incorrect')).toBeInTheDocument()
   })
 })
 
