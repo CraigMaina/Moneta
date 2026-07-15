@@ -9,6 +9,7 @@ import { Recurring } from './routes/Recurring'
 import { KitchenSink } from './routes/KitchenSink'
 import { ToastProvider } from './components/ui/Toast'
 import { SessionGate } from './features/auth/SessionGate'
+import { OnboardingGate } from './features/onboarding/OnboardingGate'
 
 export function App() {
   return (
@@ -22,6 +23,7 @@ export function App() {
           path="/*"
           element={
             <SessionGate>
+              <OnboardingGate>
               <Routes>
                 <Route path="/" element={<Home />} />
                 <Route path="/add" element={<Add />} />
@@ -31,6 +33,7 @@ export function App() {
                 <Route path="/settings" element={<Settings />} />
                 <Route path="/recurring" element={<Recurring />} />
               </Routes>
+              </OnboardingGate>
             </SessionGate>
           }
         />

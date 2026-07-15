@@ -325,3 +325,11 @@ Dev/tooling:
 - **The Home upcoming-bills surface renders nothing when idle/loading/erroring** — it's a supplementary nudge, so it never adds an error card or empty state to Home; the `<section>` uses `empty:hidden` so it also claims no spacing when there's nothing due.
 - **Recurring management lives at `/settings → Recurring`, not a bottom tab** (the five tabs stay the core PRD screens), consistent with the Settings placement decision.
 - **`kind` is constrained to income/expense** (a recurring transfer isn't a "bill", and the safe-to-spend bills term only sums expenses).
+
+## Onboarding (F1)
+
+- **No scaffolding created in onboarding — it only collects.** The `handle_new_user` trigger already seeds the profile, 3 accounts, and the full category set at signup, so onboarding just gathers the three safe-to-spend inputs (income, fixed bills, one goal) + the paste wow-moment and writes them.
+- **Completion is a flag on `profiles.consent_flags.onboarding_completed`** (jsonb, merged so other flags survive) — durable and cross-device, no migration. `OnboardingGate` (just inside `SessionGate`) shows the flow whenever that flag is absent. Existing users without the flag see onboarding once and can skip.
+- **Every step is skippable and writes are batched at "finish"** (not per step), so skipping a step simply doesn't write it — matching PRD F1 "skipped inputs produce sensible defaults". Bills → `recurring_items` (monthly, due today, on the default account); goal → `goals`; income → `profiles.expected_income_cents`.
+- **The paste step reuses `PasteToParseFlow` wholesale** — the same paste→parse→confirm→save the Add sheet uses — rather than a bespoke onboarding parser, so the wow-moment is the real thing.
+- **On a profile-load error the gate falls through to the app** rather than trapping the user in a splash (RLS still protects data; they can retry inside).

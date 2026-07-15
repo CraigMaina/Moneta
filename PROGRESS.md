@@ -296,3 +296,13 @@ recurring_items already existed (RLS complete) and already fed safe-to-spend via
 - UI: `RecurringEditorSheet` (kind, keypad amount, account/category, cadence, next-due), `routes/Recurring.tsx` (list + mark-paid + edit/delete, reached from Settings → Money), `UpcomingBills` Home surface (due-soon/overdue + one-tap pay; renders nothing when idle).
 
 **Next (user batch):** F1 onboarding, then F8 habits, F9 nudges, F11 app-lock/delete, F13 CSV export, F12 offline queue, F5 statement import.
+
+## Onboarding — F1 (lead)
+
+90-seconds-to-value first-run flow. No migration (handle_new_user trigger already seeds profile/accounts/categories). Typecheck + lint clean, **429 tests**. Verified live end-to-end (welcome → skip → landed on Home with a live safe-to-spend number).
+
+- `features/onboarding/profileMutations.ts` — useUpdateProfile + onboarding-complete flag helpers (consent_flags).
+- `OnboardingFlow.tsx` — welcome → income (keypad) → bills (quick-add) → goal (keypad) → paste (reuses PasteToParseFlow); skippable throughout; writes collected data at finish.
+- `OnboardingGate.tsx` — gates the app on the completion flag; wired inside SessionGate in App.tsx.
+
+**Next (user batch):** F8 habits, F9 nudges, F11 app-lock/delete, F13 CSV export, F12 offline queue, F5 statement import.
