@@ -286,3 +286,13 @@ The Goals tab (previously a stub) is now a full screen. Schema already existed (
 - UI: `GoalCard` (progress ring + saved/target + projected line + Contribute), `GoalEditorSheet` (name + keypad target + date + emoji), `ContributeSheet` (keypad), `Confetti` (one-time, reduced-motion-safe), `routes/Goals.tsx` (list, empty/loading/error, delete-confirm, celebration).
 
 **Both stub tabs are now built (Insights F10, Goals F7).** Next up (user-requested batch, in order): F6 recurring/reminders, F1 onboarding, F8 habits, F9 nudges, F11 app-lock/delete, F13 CSV export, F12 offline queue, F5 statement import.
+
+## Recurring & bill reminders — F6 (lead)
+
+recurring_items already existed (RLS complete) and already fed safe-to-spend via useUpcomingRecurringBills; this adds the F6 UI/logic. Typecheck + lint clean, **429 tests** (9 new). Verified live (empty state).
+
+- `features/recurring/cadence.ts` — pure, tested: advanceDueDate (weekly/monthly, clamps), dueStatus/dueLabel/isDueSoonOrOverdue.
+- Data: `queries.ts` (useRecurringItems), `schemas.ts` (zod), `mutations.ts` (create/update/delete + markPaid — books the transaction and advances the due date, tested).
+- UI: `RecurringEditorSheet` (kind, keypad amount, account/category, cadence, next-due), `routes/Recurring.tsx` (list + mark-paid + edit/delete, reached from Settings → Money), `UpcomingBills` Home surface (due-soon/overdue + one-tap pay; renders nothing when idle).
+
+**Next (user batch):** F1 onboarding, then F8 habits, F9 nudges, F11 app-lock/delete, F13 CSV export, F12 offline queue, F5 statement import.

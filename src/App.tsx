@@ -5,6 +5,7 @@ import { Transactions } from './routes/Transactions'
 import { Goals } from './routes/Goals'
 import { Insights } from './routes/Insights'
 import { Settings } from './routes/Settings'
+import { Recurring } from './routes/Recurring'
 import { KitchenSink } from './routes/KitchenSink'
 import { ToastProvider } from './components/ui/Toast'
 import { SessionGate } from './features/auth/SessionGate'
@@ -28,6 +29,7 @@ export function App() {
                 <Route path="/goals" element={<Goals />} />
                 <Route path="/insights" element={<Insights />} />
                 <Route path="/settings" element={<Settings />} />
+                <Route path="/recurring" element={<Recurring />} />
               </Routes>
             </SessionGate>
           }

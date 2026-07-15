@@ -47,6 +47,7 @@ export const goalContributionKeys = {
 }
 
 export const recurringItemKeys = {
+  all: (userId: string | undefined) => ['recurringItems', userId] as const,
   upcomingBills: (userId: string | undefined, fromDate: string, toDate: string) =>
     ['recurringItems', userId, 'upcomingBills', fromDate, toDate] as const,
 }

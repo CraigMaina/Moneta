@@ -12,6 +12,7 @@ import { ReceiptIcon, SettingsIcon } from '../components/ui/icons'
 import { SafeToSpendHero } from '../components/ui/SafeToSpendHero'
 import { TabBar } from '../components/ui/TabBar'
 import { AddTransactionSheet } from '../features/transactions/AddTransactionSheet'
+import { UpcomingBills } from '../features/recurring/UpcomingBills'
 import { toNairobiDateString } from '../features/transactions/nairobiDate'
 import { useAccountBalances, useCategories, useTransactions } from '../features/transactions/queries'
 import type { Transaction } from '../features/transactions/types'
@@ -80,6 +81,10 @@ export function Home() {
 
         <section className="mt-6">
           <HeroSection />
+        </section>
+
+        <section className="mt-6 empty:hidden">
+          <UpcomingBills />
         </section>
 
         <section className="mt-8">

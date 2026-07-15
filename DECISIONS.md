@@ -316,3 +316,12 @@ Dev/tooling:
 - **Projected completion uses the trailing-30-day contribution rate** (`projectGoalCompletion`): `no-rate` when nothing was contributed in the window (we don't invent a date), else `remaining / (recent / 30)` days out. Pure and exhaustively tested.
 - **Deleting a goal is confirmed** (a two-button sheet), because it cascades its contributions — the one irreversible action in the feature, so it doesn't hide behind a single tap. Everything else is a plain toast.
 - **Celebration respects reduced motion** — the confetti burst becomes a single calm fade; `onDone` still fires so nothing gets stuck.
+
+## Recurring & bill reminders (F6)
+
+- **Cadences are a small closed keyword set** (`weekly` / `monthly`) stored in `recurring_items.cadence`, not a full RRULE — enough for real bills, and `advanceDueDate` is trivially correct (date-fns `addDays`/`addMonths`, which clamps Jan-31 + 1mo → Feb-28). All due-date math is Nairobi calendar-date math on `yyyy-MM-dd` (never raw instants).
+- **"Mark paid" books a real transaction from the template AND advances the due date**, in one mutation — so the payment flows through balances and safe-to-spend exactly like a manual entry, and the bill rolls forward. Not optimistic (a deliberate confirm tap; correctness over instant feedback).
+- **Reminders are in-app for now** (a Home "due soon / overdue" surface via `dueStatus`, 2-day window per PRD), not Web Push — push scheduling needs the notification infra from F8, so it's deferred rather than faked.
+- **The Home upcoming-bills surface renders nothing when idle/loading/erroring** — it's a supplementary nudge, so it never adds an error card or empty state to Home; the `<section>` uses `empty:hidden` so it also claims no spacing when there's nothing due.
+- **Recurring management lives at `/settings → Recurring`, not a bottom tab** (the five tabs stay the core PRD screens), consistent with the Settings placement decision.
+- **`kind` is constrained to income/expense** (a recurring transfer isn't a "bill", and the safe-to-spend bills term only sums expenses).
