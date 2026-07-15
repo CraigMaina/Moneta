@@ -8,6 +8,7 @@ import { ThemeToggle } from '../features/settings/ThemeToggle'
 import { useSignOut } from '../features/settings/useSignOut'
 import { SecuritySettings } from '../features/security/SecuritySettings'
 import { DeleteAllData } from '../features/security/DeleteAllData'
+import { ExportData } from '../features/export/ExportData'
 import { useSession } from '../features/auth/useSession'
 
 /**
@@ -62,6 +63,10 @@ export function Settings() {
 
         <Section title="Security">
           <SecuritySettings />
+        </Section>
+
+        <Section title="Data">
+          <ExportData />
         </Section>
 
         <Section title="Account">

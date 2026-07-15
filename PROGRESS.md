@@ -337,3 +337,12 @@ Local PIN lock (+ optional biometrics) and a guarded delete-all. Typecheck + lin
 - Settings: `SecuritySettings.tsx` (set/change/turn-off PIN, biometric toggle) + `SetPinSheet.tsx`; `DeleteAllData.tsx` + `deleteData.ts` (FK-ordered wipe of records, keeps accounts/categories, resets profile; clears cache/persister/lock) behind a type-to-confirm sheet.
 
 **Next (user batch):** F13 CSV export, F12 offline queue, F5 statement import.
+
+## CSV export — F13 (lead)
+
+Client-side RFC 4180 export. Typecheck + lint clean, **461 tests** (7 new). No migration.
+
+- `features/export/csv.ts` — pure/tested: `escapeCsvField` (RFC 4180 quoting), `toCsv` (CRLF), `centsToDecimalString` (integer math, no float), `transactionsToCsvRows` (header + name-resolved rows; amounts positive, `kind` carries direction).
+- `ExportData.tsx` — builds from the loaded transaction cache (all rows) and downloads a UTF-8-BOM CSV (`moneta-transactions-YYYY-MM-DD.csv`); Settings → Data section. Disabled/teaching state when there's nothing to export.
+
+**Next (user batch):** F12 offline queue, F5 statement import.
