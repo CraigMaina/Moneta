@@ -133,6 +133,9 @@ function RecurringEditorBody({
           type="text"
           value={merchant}
           onChange={(e) => setMerchant(e.target.value)}
+          // Stop the pointer-down from reaching the sheet's drag handler — on
+          // iOS the drag gesture otherwise swallows taps on native inputs.
+          onPointerDown={(e) => e.stopPropagation()}
           placeholder="e.g. Rent, Netflix, Sacco"
           aria-label="Recurring name"
           className="h-12 w-full rounded-card bg-paper-0 px-4 text-[15px] text-ink-900 placeholder:text-ink-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral-600"
@@ -178,6 +181,10 @@ function RecurringEditorBody({
           type="date"
           value={nextDueDate}
           onChange={(e) => setNextDueDate(e.target.value)}
+          // Without this, the sheet's drag-to-dismiss gesture captures the tap
+          // and the native date picker never opens / commits on iOS — the due
+          // date appears "stuck" on its seeded value (today).
+          onPointerDown={(e) => e.stopPropagation()}
           aria-label="Next due date"
           className="h-12 w-full rounded-card bg-paper-0 px-4 text-[15px] text-ink-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral-600"
         />

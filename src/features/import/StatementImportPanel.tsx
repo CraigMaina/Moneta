@@ -49,6 +49,9 @@ export function StatementImportPanel({
   const [pdfPassword, setPdfPassword] = useState('')
   const [needsPassword, setNeedsPassword] = useState(false)
   const [pdfError, setPdfError] = useState<string | null>(null)
+  // The raw pdf.js error, shown small under the friendly line — iOS has no easy
+  // console, so this is the only way a failed read is diagnosable from a phone.
+  const [pdfErrorDetail, setPdfErrorDetail] = useState<string | null>(null)
   const [extracting, setExtracting] = useState(false)
 
   const accounts = accountsQuery.data ?? []
@@ -84,6 +87,7 @@ export function StatementImportPanel({
   const runPdfExtraction = async (file: File, password?: string) => {
     setExtracting(true)
     setPdfError(null)
+    setPdfErrorDetail(null)
     try {
       const { extractPdfText } = await import('./pdfText')
       const extracted = await extractPdfText(file, password)
@@ -113,6 +117,7 @@ export function StatementImportPanel({
         setPdfFile(null)
         setNeedsPassword(false)
         setPdfError('Couldn’t read that PDF. Try pasting the statement text instead.')
+        setPdfErrorDetail(error instanceof Error ? `${error.name}: ${error.message}` : String(error))
       }
     } finally {
       setExtracting(false)
@@ -235,7 +240,12 @@ export function StatementImportPanel({
           </div>
         )}
 
-        {pdfError && !needsPassword && <p className="text-[12.5px] text-coral-600">{pdfError}</p>}
+        {pdfError && !needsPassword && (
+          <div>
+            <p className="text-[12.5px] text-coral-600">{pdfError}</p>
+            {pdfErrorDetail && <p className="mt-1 break-words text-[11px] text-ink-600">Details: {pdfErrorDetail}</p>}
+          </div>
+        )}
       </Card>
 
       {result && result.candidates.length === 0 && (

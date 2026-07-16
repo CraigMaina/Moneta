@@ -253,6 +253,8 @@ function AddTransactionForm({ onClose }: { onClose: () => void }) {
           type="text"
           value={note}
           onChange={(event) => setNote(event.target.value)}
+          // Keep the sheet's drag-to-dismiss from swallowing taps on iOS.
+          onPointerDown={(event) => event.stopPropagation()}
           placeholder="What was this for?"
           className="mt-2 h-12 w-full rounded-card bg-paper-50 px-4 text-[15px] text-ink-900 placeholder:text-ink-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral-600 focus-visible:ring-offset-2 focus-visible:ring-offset-paper-50"
         />

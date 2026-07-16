@@ -74,6 +74,8 @@ export function PasteToParse({ onParse, status = 'idle', errorMessage, onEnterMa
           rows={5}
           value={text}
           onChange={(event) => setText(event.target.value)}
+          // Keep the sheet's drag-to-dismiss from swallowing taps on iOS.
+          onPointerDown={(event) => event.stopPropagation()}
           placeholder="e.g. QGH7XXXXX1 Confirmed. You have received Ksh1,500.00 from..."
           className="w-full resize-none rounded-card bg-paper-50 p-4 text-[15px] leading-relaxed text-ink-900 placeholder:text-ink-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral-600 focus-visible:ring-offset-2 focus-visible:ring-offset-paper-0"
         />
