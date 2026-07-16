@@ -10,6 +10,7 @@ import type { Account, AccountBalance, Category, Transaction } from '../features
 
 const {
   useSafeToSpendMock,
+  useDailyBudgetMock,
   useAccountBalancesMock,
   useTransactionsMock,
   useCategoriesMock,
@@ -17,6 +18,7 @@ const {
   useAddTransactionMock,
 } = vi.hoisted(() => ({
   useSafeToSpendMock: vi.fn(),
+  useDailyBudgetMock: vi.fn(),
   useAccountBalancesMock: vi.fn(),
   useTransactionsMock: vi.fn(),
   useCategoriesMock: vi.fn(),
@@ -26,6 +28,10 @@ const {
 
 vi.mock('../features/transactions/useSafeToSpend', () => ({
   useSafeToSpend: useSafeToSpendMock,
+}))
+
+vi.mock('../features/budgets/useDailyBudget', () => ({
+  useDailyBudget: useDailyBudgetMock,
 }))
 
 vi.mock('../features/transactions/queries', () => ({
@@ -134,6 +140,19 @@ function renderHome() {
 }
 
 describe('Home', () => {
+  const DAILY_BUDGET = {
+    data: {
+      dailyTargetCents: 150000,
+      spentTodayCents: 60000,
+      leftTodayCents: 90000,
+      ratio: 0.4,
+      isOver: false,
+      hasBudget: true,
+    },
+    isLoading: false,
+    isError: false,
+  }
+
   beforeEach(() => {
     useUiStore.setState({ activeSheet: null })
     mockMatchMedia()
@@ -141,15 +160,34 @@ describe('Home', () => {
     useCategoriesMock.mockReturnValue(queryResult([GROCERIES]))
     useAccountBalancesMock.mockReturnValue(queryResult(BALANCES))
     useAddTransactionMock.mockReturnValue({ mutate: vi.fn(), isPending: false })
+    useDailyBudgetMock.mockReturnValue(DAILY_BUDGET)
+    // Insight line hidden by default (no declared income) so hero tests stay focused.
+    useSafeToSpendMock.mockReturnValue({
+      data: { safeToSpendCents: 0, isOver: false, expectedIncomeCents: 0 },
+      isLoading: false,
+      isError: false,
+    })
   })
 
   afterEach(() => {
     vi.restoreAllMocks()
   })
 
-  it('renders the safe-to-spend hero from useSafeToSpend and the account balances', () => {
-    useSafeToSpendMock.mockReturnValue({
-      data: { safeToSpendCents: 140000, spentTodayCents: 20000, dailyBudgetCents: 50000, isOver: false },
+  it('renders the daily-spend hero from useDailyBudget and the account balances', () => {
+    useTransactionsMock.mockReturnValue(queryResult(TRANSACTIONS))
+
+    renderHome()
+
+    expect(screen.getByText('Left to spend today')).toBeInTheDocument()
+    expect(screen.getByText('900')).toBeInTheDocument() // KES 90,000 left today
+    expect(screen.getByText('of KES 1,500')).toBeInTheDocument()
+    expect(screen.getByText('M-PESA')).toBeInTheDocument()
+    expect(screen.getByText('Naivas')).toBeInTheDocument()
+  })
+
+  it('teaches when no category budgets are set, with a link to set them', () => {
+    useDailyBudgetMock.mockReturnValue({
+      data: { dailyTargetCents: 0, spentTodayCents: 0, leftTodayCents: 0, ratio: 0, isOver: false, hasBudget: false },
       isLoading: false,
       isError: false,
     })
@@ -157,14 +195,12 @@ describe('Home', () => {
 
     renderHome()
 
-    expect(screen.getByText('Safe to spend today')).toBeInTheDocument()
-    expect(screen.getByText('1,400')).toBeInTheDocument()
-    expect(screen.getByText('M-PESA')).toBeInTheDocument()
-    expect(screen.getByText('Naivas')).toBeInTheDocument()
+    expect(screen.getByText('Set your daily number')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Set budgets' })).toHaveAttribute('href', '/budgets')
   })
 
-  it('shows a calm retry when the safe-to-spend calc errors, never a scary state', () => {
-    useSafeToSpendMock.mockReturnValue({ data: undefined, isLoading: false, isError: true })
+  it('shows a calm retry when the daily-budget calc errors, never a scary state', () => {
+    useDailyBudgetMock.mockReturnValue({ data: undefined, isLoading: false, isError: true })
     useTransactionsMock.mockReturnValue(queryResult(TRANSACTIONS))
 
     renderHome()
@@ -174,11 +210,6 @@ describe('Home', () => {
   })
 
   it('shows the empty state when there are no transactions, and its button opens the Add sheet', async () => {
-    useSafeToSpendMock.mockReturnValue({
-      data: { safeToSpendCents: 140000, spentTodayCents: 20000, dailyBudgetCents: 50000, isOver: false },
-      isLoading: false,
-      isError: false,
-    })
     useTransactionsMock.mockReturnValue(queryResult([]))
     const user = userEvent.setup()
 
@@ -193,11 +224,6 @@ describe('Home', () => {
   })
 
   it("the TabBar's Add button also opens the Add sheet", async () => {
-    useSafeToSpendMock.mockReturnValue({
-      data: { safeToSpendCents: 140000, spentTodayCents: 20000, dailyBudgetCents: 50000, isOver: false },
-      isLoading: false,
-      isError: false,
-    })
     useTransactionsMock.mockReturnValue(queryResult(TRANSACTIONS))
     const user = userEvent.setup()
 

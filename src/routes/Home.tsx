@@ -7,10 +7,12 @@ import { extractSharedText } from '../lib/shareTarget'
 import { AmountDisplay, type AmountDisplayTone } from '../components/ui/AmountDisplay'
 import { Button } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
+import { DailySpendHero } from '../components/ui/DailySpendHero'
 import { EmptyState } from '../components/ui/EmptyState'
 import { ReceiptIcon, SettingsIcon } from '../components/ui/icons'
-import { SafeToSpendHero } from '../components/ui/SafeToSpendHero'
 import { TabBar } from '../components/ui/TabBar'
+import { useDailyBudget } from '../features/budgets/useDailyBudget'
+import { formatKES } from '../lib/money'
 import { AddTransactionSheet } from '../features/transactions/AddTransactionSheet'
 import { DailyCard } from '../features/habits/DailyCard'
 import { NudgesSurface } from '../features/nudges/NudgesSurface'
@@ -122,10 +124,15 @@ function SectionHeading({ children }: { children: string }) {
   return <h2 className="text-[12.5px] font-semibold uppercase tracking-wide text-ink-600">{children}</h2>
 }
 
-/** The hero: loading -> a calm skeleton ring (no spinner, no jitter), error -> a calm retry, never a scary state. */
+/**
+ * The hero: today's spend against a daily target derived from the user's own
+ * category budgets. Loading -> a calm skeleton ring (no spinner, no jitter);
+ * error -> a calm retry; no budgets set -> a teaching prompt, never a
+ * meaningless 0. Safe-to-spend is kept as a small insight line below.
+ */
 function HeroSection() {
   const queryClient = useQueryClient()
-  const { data, isLoading, isError } = useSafeToSpend()
+  const { data, isLoading, isError } = useDailyBudget()
 
   if (isError) {
     return (
@@ -149,12 +156,58 @@ function HeroSection() {
     )
   }
 
+  if (!data.hasBudget) {
+    return <NoBudgetHero />
+  }
+
   return (
-    <SafeToSpendHero
-      safeToSpendCents={data.safeToSpendCents}
-      spentTodayCents={data.spentTodayCents}
-      dailyBudgetCents={data.dailyBudgetCents}
-    />
+    <div>
+      <DailySpendHero
+        dailyTargetCents={data.dailyTargetCents}
+        spentTodayCents={data.spentTodayCents}
+        leftTodayCents={data.leftTodayCents}
+        isOver={data.isOver}
+      />
+      <div className="mt-4">
+        <SafeToSpendInsight />
+      </div>
+    </div>
+  )
+}
+
+/** Empty hero: no category budgets yet — teach the action that fills it (design system: empty states teach). */
+function NoBudgetHero() {
+  return (
+    <div className="flex flex-col items-center gap-3 py-8 text-center">
+      <p className="text-[15px] font-semibold text-ink-900">Set your daily number</p>
+      <p className="max-w-[16rem] text-[13px] text-ink-600">
+        Add a budget for your everyday categories and Moneta shows what you can spend each day. Keep one-off bills
+        like rent in Recurring.
+      </p>
+      <Link
+        to="/budgets"
+        className="inline-flex h-11 items-center rounded-full bg-coral-600 px-5 text-[15px] font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral-600 focus-visible:ring-offset-2 focus-visible:ring-offset-paper-0"
+      >
+        Set budgets
+      </Link>
+    </div>
+  )
+}
+
+/**
+ * Safe-to-spend as a secondary insight (a different lens: income after bills,
+ * spread over the cycle). Rendered only when it's meaningful — the user has
+ * income to base it on and isn't over for the period — so it never competes
+ * with the budget circle or shows a confusing zero.
+ */
+function SafeToSpendInsight() {
+  const { data } = useSafeToSpend()
+  if (!data || data.isOver || data.expectedIncomeCents <= 0) return null
+  return (
+    <p className="text-center text-[12.5px] text-ink-600">
+      From income after bills, about{' '}
+      <span className="font-semibold text-ink-900">{formatKES(data.safeToSpendCents)}</span>/day
+    </p>
   )
 }
 

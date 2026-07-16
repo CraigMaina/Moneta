@@ -3,76 +3,65 @@ import { animate as animateValue, motion, useReducedMotion } from 'framer-motion
 import { AmountDisplay } from './AmountDisplay'
 import { ProgressRing, clampProgress } from './ProgressRing'
 import { RING_STROKE, heroNumeralPx, useResponsiveRingSize } from './heroRing'
+import { formatKES } from '../../lib/money'
 import { cn } from '../../lib/cn'
 
-export interface SafeToSpendHeroProps {
-  /** Can go negative — the "over this month" state. Never a stored/mutable value, always derived. */
-  safeToSpendCents: number
+export interface DailySpendHeroProps {
+  /** Today's target = the user's monthly category budgets ÷ days in the month. */
+  dailyTargetCents: number
+  /** Expense spend booked today (transfers/income already excluded). */
   spentTodayCents: number
-  /** The daily allowance the arc measures today's spend against. */
-  dailyBudgetCents: number
+  /** target − spent; negative once over today. */
+  leftTodayCents: number
+  /** True once today's spend has passed the target. */
+  isOver: boolean
   className?: string
 }
 
-// Count-up duration/easing: a moment-of-meaning exception to CLAUDE.md's
-// <=350ms motion ceiling (explicitly called out in the brief for this one
-// element). 800ms tween easeOut reads as a confident reveal without feeling
-// slow. Not a token — see DECISIONS.md.
+// Matches the safe-to-spend hero's reveal: a moment-of-meaning exception to the
+// <=350ms ceiling, called out in the brief for the signature number.
 const COUNT_UP_DURATION_S = 0.8
 
-// The arc "breathes" — a very subtle, slow, looping scale pulse so the hero
-// reads as alive rather than static. 1.5% amplitude over a a slow 3.2s cycle
-// is deliberately understated; anything larger would compete with the count-up
-// for attention. Not a token — see DECISIONS.md.
 const BREATH_SCALE: [number, number, number] = [1, 1.015, 1]
 const BREATH_DURATION_S = 3.2
 
-
 /**
- * THE signature element (PRD §4.5/§8, CLAUDE.md "Signature"). An oversized
- * tabular numeral counts up to its value on load with a breathing coral arc
- * behind it showing today's spend against the daily allowance. Everything
- * else on Home stays quiet so this one moment carries the screen.
+ * THE signature element: a daily spending gauge driven by the user's own
+ * category budgets. The oversized numeral counts up to what's left to spend
+ * today, with a breathing coral arc showing today's spend against the target.
+ * Over-budget-for-today is a calm amber "KES X over today" — never a scary red
+ * zero (mirrors the safe-to-spend hero's over state).
  *
- * Negative case: never a scary red zero — a calm, amber, "You're over this
- * month" message replaces the numeral. `prefers-reduced-motion` skips the
- * count-up and the breathing; both render their final state immediately.
+ * The empty case (no budgets set) is handled by the caller, which teaches
+ * instead of rendering a meaningless 0-target ring.
  */
-export function SafeToSpendHero({
-  safeToSpendCents,
+export function DailySpendHero({
+  dailyTargetCents,
   spentTodayCents,
-  dailyBudgetCents,
+  leftTodayCents,
+  isOver,
   className,
-}: SafeToSpendHeroProps) {
+}: DailySpendHeroProps) {
   const prefersReducedMotion = useReducedMotion()
-  const isOver = safeToSpendCents < 0
-
   const { ref: wrapRef, ringSize } = useResponsiveRingSize()
 
-  // Only the animated count-up needs component state — the reduced-motion and
-  // "over this month" cases are computed directly at render time below, so
-  // the effect's only job is subscribing to Framer's animation ticker (the
-  // "external system"), never calling setState synchronously in its own body.
   const [animatedCents, setAnimatedCents] = useState(0)
-
   useEffect(() => {
     if (isOver || prefersReducedMotion) return
-    const controls = animateValue(0, safeToSpendCents, {
+    const controls = animateValue(0, leftTodayCents, {
       duration: COUNT_UP_DURATION_S,
       ease: 'easeOut',
       onUpdate: (value) => setAnimatedCents(Math.round(value)),
     })
     return () => controls.stop()
-  }, [safeToSpendCents, prefersReducedMotion, isOver])
+  }, [leftTodayCents, prefersReducedMotion, isOver])
 
-  const displayCents = isOver ? 0 : prefersReducedMotion ? safeToSpendCents : animatedCents
+  const displayCents = isOver ? 0 : prefersReducedMotion ? leftTodayCents : animatedCents
+  const ringProgress = isOver ? 1 : clampProgress(dailyTargetCents > 0 ? spentTodayCents / dailyTargetCents : 0)
 
-  const spendRatio = dailyBudgetCents > 0 ? clampProgress(spentTodayCents / dailyBudgetCents) : 0
-  const ringProgress = isOver ? 1 : spendRatio
-
-  // Size the numeral from the final value (not the animating one) so the
-  // count-up plays at a stable size instead of resizing every frame.
-  const numeralPx = heroNumeralPx(Math.abs(safeToSpendCents), ringSize)
+  // Size from the final value (not the animating one) so the count-up plays at
+  // a stable size instead of resizing every frame.
+  const numeralPx = heroNumeralPx(Math.abs(leftTodayCents), ringSize)
 
   return (
     <div ref={wrapRef} className={cn('flex flex-col items-center', className)}>
@@ -91,22 +80,21 @@ export function SafeToSpendHero({
           {isOver ? (
             <div className="flex flex-col items-center px-6 text-center">
               <p className="text-[15px] font-medium text-ink-600">You&apos;re</p>
-              {/* KES mark de-emphasized so the numeral carries the moment (mirrors the Keypad). */}
               <p className="mt-1 whitespace-nowrap leading-none">
                 <span className="mr-1.5 align-top font-display text-[22px] font-semibold text-ink-600">KES</span>
                 <AmountDisplay
-                  cents={Math.abs(safeToSpendCents)}
+                  cents={Math.abs(leftTodayCents)}
                   size="hero"
                   tone="warning"
                   withSymbol={false}
                   style={{ fontSize: numeralPx }}
                 />
               </p>
-              <p className="mt-1 text-[15px] font-medium text-ink-600">over this month</p>
+              <p className="mt-1 text-[15px] font-medium text-ink-600">over today</p>
             </div>
           ) : (
             <div className="flex flex-col items-center px-6 text-center">
-              <p className="text-[15px] font-medium text-ink-600">Safe to spend today</p>
+              <p className="text-[15px] font-medium text-ink-600">Left to spend today</p>
               <p className="mt-1 whitespace-nowrap leading-none">
                 <span className="mr-1.5 align-top font-display text-[22px] font-semibold text-ink-600">KES</span>
                 <AmountDisplay
@@ -117,10 +105,14 @@ export function SafeToSpendHero({
                   style={{ fontSize: numeralPx }}
                 />
               </p>
+              <p className="mt-1 text-[13px] text-ink-600">of {formatKES(dailyTargetCents)}</p>
             </div>
           )}
         </ProgressRing>
       </motion.div>
+      <p className="mt-3 text-[13px] text-ink-600">
+        Spent <span className="font-semibold text-ink-900">{formatKES(spentTodayCents)}</span> today
+      </p>
     </div>
   )
 }
