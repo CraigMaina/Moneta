@@ -52,7 +52,10 @@ export function TabBar({ onAddPress, activeOverride, position = 'fixed', classNa
     <nav
       aria-label="Primary"
       className={cn(
-        'flex h-16 items-stretch justify-between bg-paper-0 px-2 shadow-bar',
+        // min-h (not a fixed h-16) so the iOS home-indicator inset below adds to
+        // the bar instead of eating into the 64px content area and clipping the
+        // icons/labels (box-sizing is border-box).
+        'flex min-h-16 items-stretch justify-between bg-paper-0 px-2 shadow-bar',
         position === 'fixed'
           ? 'fixed inset-x-0 bottom-0 z-40 pb-[env(safe-area-inset-bottom)]'
           : 'relative',

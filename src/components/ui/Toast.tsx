@@ -206,7 +206,12 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       {children}
       <div
         aria-live="polite"
-        className="pointer-events-none fixed inset-x-0 top-0 z-[60] flex flex-col items-center gap-2 px-4 pt-[calc(env(safe-area-inset-top)+12px)]"
+        // Guarantee the toast clears the notch/status bar: at least 1rem, or the
+        // safe-area inset + 0.5rem when there is one. A plain
+        // `env(safe-area-inset-top)+12px` collapses to 12px when the browser
+        // reports a 0 inset (iOS Safari in-browser), leaving the toast half under
+        // the status bar.
+        className="pointer-events-none fixed inset-x-0 top-0 z-[60] flex flex-col items-center gap-2 px-4 pt-[max(1rem,calc(env(safe-area-inset-top)+0.5rem))]"
       >
         <AnimatePresence>
           {toasts.map((toast) => (

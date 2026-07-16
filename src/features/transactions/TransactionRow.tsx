@@ -89,7 +89,13 @@ export function TransactionRow({ txn, category, account, onDelete, onRecategoriz
           <p className="truncate text-[15px] font-semibold text-ink-900">{primaryLabel}</p>
           <p className="mt-0.5 truncate text-[12.5px] text-ink-600">{metaLabel}</p>
         </div>
-        <AmountDisplay cents={displayCents} tone={tone} signed={isIncome} size="body" />
+        <AmountDisplay
+          cents={displayCents}
+          tone={tone}
+          signed={isIncome}
+          size="body"
+          className="flex-shrink-0 whitespace-nowrap"
+        />
         <button
           type="button"
           aria-label={`Actions for ${primaryLabel}`}
