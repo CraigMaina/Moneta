@@ -142,7 +142,7 @@ function HeroSection() {
     return (
       <div className="flex justify-center py-2">
         <div
-          className="h-[260px] w-[260px] animate-pulse rounded-full bg-paper-50 motion-reduce:animate-none"
+          className="aspect-square w-[260px] max-w-full animate-pulse rounded-full bg-paper-50 motion-reduce:animate-none"
           aria-hidden="true"
         />
       </div>

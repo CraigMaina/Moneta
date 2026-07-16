@@ -106,6 +106,10 @@ export function StatementImportPanel({
         setNeedsPassword(true)
         setPdfError(error.incorrect ? 'That password didn’t work. Try again.' : null)
       } else {
+        // Log the real cause — pdf.js failures (unsupported worker, corrupt
+        // file, an unusual encoding) all collapse to the same friendly line, so
+        // this is the only place the actual error survives for a bug report.
+        console.error('[statement-import] Could not read PDF', error)
         setPdfFile(null)
         setNeedsPassword(false)
         setPdfError('Couldn’t read that PDF. Try pasting the statement text instead.')

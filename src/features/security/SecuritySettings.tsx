@@ -86,16 +86,19 @@ export function SecuritySettings() {
           className="flex w-full items-center justify-between gap-3 rounded-card bg-paper-0 px-4 py-3 disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral-600"
         >
           <span className="text-[14px] font-semibold text-ink-900">Unlock with biometrics</span>
+          {/* Knob is an in-flow flex child (not absolutely positioned) so its
+              base position is unambiguous — items-center centres it vertically
+              and translate-x slides it the track's width minus the knob. */}
           <span
             className={cn(
-              'relative h-6 w-10 flex-shrink-0 rounded-full transition-colors',
+              'inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors',
               bioEnabled ? 'bg-coral-600' : 'bg-ink-300',
             )}
           >
             <span
               className={cn(
-                'absolute top-0.5 h-5 w-5 rounded-full bg-white transition-transform',
-                bioEnabled ? 'translate-x-[18px]' : 'translate-x-0.5',
+                'h-5 w-5 rounded-full bg-white shadow-sm transition-transform',
+                bioEnabled ? 'translate-x-[22px]' : 'translate-x-0.5',
               )}
             />
           </span>

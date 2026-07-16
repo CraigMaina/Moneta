@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react'
 import { cn } from '../../lib/cn'
 import { formatKES } from '../../lib/money'
 
@@ -14,6 +15,12 @@ export interface AmountDisplayProps {
   /** Renders the numeral without the "KES" symbol. Default true. */
   withSymbol?: boolean
   className?: string
+  /**
+   * Inline style, applied last so it wins over the size class (the project's
+   * `cn` isn't tailwind-merge, so a conflicting `text-[…]` class can't override
+   * the size class reliably). Used by the hero to shrink long numerals to fit.
+   */
+  style?: CSSProperties
 }
 
 // Hero sits inside the CLAUDE.md 44-56px range; the middle of that band reads
@@ -52,12 +59,13 @@ export function AmountDisplay({
   signed = false,
   withSymbol = true,
   className,
+  style,
 }: AmountDisplayProps) {
   const formatted = formatKES(cents, { withSymbol })
   const prefix = signed && cents > 0 ? '+' : ''
 
   return (
-    <span className={cn('tabular-nums', SIZE_CLASSES[size], TONE_CLASSES[tone], className)}>
+    <span className={cn('tabular-nums', SIZE_CLASSES[size], TONE_CLASSES[tone], className)} style={style}>
       {prefix}
       {formatted}
     </span>
