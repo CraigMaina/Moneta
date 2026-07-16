@@ -134,7 +134,7 @@ export function Insights() {
   }, [txns, drillCategoryId, selectedPeriod, granularity])
 
   return (
-    <main className="min-h-dvh bg-paper-0 pb-28">
+    <main className="min-h-dvh bg-paper-0 pb-[calc(env(safe-area-inset-bottom)+6.5rem)]">
       <div className="mx-auto max-w-md px-4 pt-[calc(env(safe-area-inset-top)+24px)]">
         <div className="flex items-center justify-between gap-3">
           <h1 className="font-display text-[22px] font-semibold text-ink-900">Insights</h1>
